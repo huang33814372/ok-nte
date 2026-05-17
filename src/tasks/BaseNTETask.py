@@ -133,16 +133,10 @@ class BaseNTETask(BaseTask):
 
     # fmt: off
     def click(self, x: int | Box | List[Box] = -1, y=-1, move_back=None, name=None,
-              interval=None, move=None, down_time=0.02, after_sleep=0, key='left',
+              interval=-1, move=None, down_time=0.02, after_sleep=0, key='left',
               hcenter=False, vcenter=False, action_name=None) -> Any:
-        if interval is None:
-            action_interval = 0.1
-            interval = -1
-        else:
-            action_interval = interval
-
         if action_name is not None:
-            if not self.check_action_interval(action_name, action_interval):
+            if not self.check_action_interval(action_name, interval):
                 return False
             interval = -1
 
@@ -157,7 +151,7 @@ class BaseNTETask(BaseTask):
         )
 
     def operate_click(self, x: int | Box | List[Box] = -1, y=-1, restore_cursor=True, name=None,
-                      interval=0.1, down_time=0.02, after_sleep=0, key='left',
+                      interval=-1, down_time=0.02, after_sleep=0, key='left',
                       hcenter=False, vcenter=False, action_name=None) -> Any:
         action_name = action_name or "operate_click"
         if not self.check_action_interval(action_name, interval):
@@ -172,15 +166,16 @@ class BaseNTETask(BaseTask):
         )
         self.sleep(after_sleep)
         return result
-    # fmt: on
 
-    def send_key(self, *args, action_name=None, **kwargs):
+    def send_key(self, key, down_time=0.02, interval=-1, after_sleep=0, action_name=None) -> Any:
         if action_name is not None:
-            interval = kwargs.get("interval", 0.1)
             if not self.check_action_interval(action_name, interval):
                 return False
-            kwargs["interval"] = -1
-        return super().send_key(*args, **kwargs)
+            interval = -1
+        return super().send_key(
+            key, down_time=down_time, interval=interval, after_sleep=after_sleep
+        )
+    # fmt: on
 
     def check_action_interval(self, action_name: str, interval: float) -> bool:
         if interval <= 0:
@@ -201,6 +196,13 @@ class BaseNTETask(BaseTask):
             return self.executor.interaction.operate(func, block, restore_cursor=restore_cursor)
         else:
             return func()
+        
+    def move_mouse_relative(self, dx, dy):
+        from src.interaction.NTEInteraction import NTEInteraction
+
+        if isinstance(self.executor.interaction, NTEInteraction):
+            self.bring_to_front(after_sleep=1)
+            return self.executor.interaction.move_mouse_relative(dx, dy)
 
     def get_char_box(self, index: int):
         box = self.get_box_by_name(f"box_char_{index + 1}")
@@ -527,7 +529,7 @@ class BaseNTETask(BaseTask):
             return False
         return self.hwnd.is_foreground()
 
-    def bring_to_front(self):
+    def bring_to_front(self, after_sleep=0):
         """
         强制将窗口带到最前端。
         """
@@ -579,6 +581,7 @@ class BaseNTETask(BaseTask):
             self.sleep(0.1)
             if self.is_foreground():
                 self.log_info(f"bring_to_front {hwnd} succeeded")
+                self.sleep(after_sleep)
                 return True
             self.log_info(f"bring_to_front {hwnd} did not keep foreground")
             return False

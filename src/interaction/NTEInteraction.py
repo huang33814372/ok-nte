@@ -5,7 +5,7 @@ import time
 import win32api
 import win32con
 from ok import og
-from ok.device.intercation import PostMessageInteraction
+from ok.device.intercation import INPUT, MOUSEINPUT, PostMessageInteraction, SendInput
 from ok.util.logger import Logger
 from win32api import GetCursorPos, SetCursorPos
 
@@ -135,3 +135,18 @@ class NTEInteraction(PostMessageInteraction):
 
     def unblock_input(self):
         self.user32.BlockInput(False)
+
+    def move_mouse_relative(self, dx, dy):
+        """
+        Moves the mouse cursor relative to its current position using user32.SendInput.
+
+        Args:
+            dx: The number of pixels to move the mouse horizontally.
+                (positive for right, negative for left).
+            dy: The number of pixels to move the mouse vertically.
+                (positive for down, negative for up).
+        """
+
+        mi = MOUSEINPUT(dx, dy, 0, 1, 0, None)
+        i = INPUT(0, mi)  # type=0 indicates a mouse event
+        SendInput(1, ctypes.pointer(i), ctypes.sizeof(INPUT))
