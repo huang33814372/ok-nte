@@ -78,6 +78,8 @@ jobs:
       - name: Build with PyAppify Action
         id: build-app
         uses: ok-oldking/pyappify-action@master #使用pyappify打包exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           build_exe_only: false
           # 使用上一个稳定版本的 Release 来获取已打包的启动器，从而跳过耗时的打包过程
