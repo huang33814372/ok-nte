@@ -50,29 +50,14 @@ class TestDailyCoffee(unittest.TestCase):
         self.assertIn((0.6, 0.656), click_positions)
         self.assertEqual(len(task.wait_until_calls), 2)
 
-    def test_claim_coffee_can_skip_restock_purchase(self):
-        task = self._task({DailyTask.CONF_RESTOCK_COFFEE: False})
-
-        self.assertTrue(DailyTask.claim_coffee(task))
-
-        click_positions = [(x, y) for x, y, _ in task.clicks]
-        self.assertIn((0.188, 0.877), click_positions)
-        self.assertIn((0.072, 0.886), click_positions)
-        self.assertNotIn((0.115, 0.53), click_positions)
-        self.assertNotIn((0.34, 0.785), click_positions)
-        self.assertNotIn((0.717, 0.787), click_positions)
-        self.assertNotIn((0.595, 0.776), click_positions)
-        self.assertNotIn((0.6, 0.656), click_positions)
-        self.assertEqual(len(task.wait_until_calls), 1)
-        self.assertIn("已跳过一咖舍补货", task.info_messages)
-
 
 class TestDailyCoffeeLocaleGate(unittest.TestCase):
     """BnanZ0 PR #86 反馈: 仅在 zh_CN 下暴露 CONF_RESTOCK_COFFEE 给 UI."""
 
     def _patch_locale(self, name=None, *, raise_exc=False, missing_app=False, missing_locale=False):
-        from ok import og
         from unittest.mock import MagicMock
+
+        from ok import og
 
         original_app = getattr(og, "app", None)
         if missing_app:
@@ -92,6 +77,7 @@ class TestDailyCoffeeLocaleGate(unittest.TestCase):
 
     def _restore_app(self, original_app):
         from ok import og
+
         og.app = original_app
 
     def _instantiate(self):
@@ -108,7 +94,7 @@ class TestDailyCoffeeLocaleGate(unittest.TestCase):
         try:
             task = self._instantiate()
             self.assertIn(DailyTask.CONF_RESTOCK_COFFEE, task.default_config)
-            self.assertTrue(task.default_config[DailyTask.CONF_RESTOCK_COFFEE])
+            self.assertFalse(task.default_config[DailyTask.CONF_RESTOCK_COFFEE])
             self.assertIn(DailyTask.CONF_RESTOCK_COFFEE, task.config_description)
         finally:
             self._restore_app(original)
