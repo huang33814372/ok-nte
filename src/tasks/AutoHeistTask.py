@@ -5,10 +5,13 @@ from threading import Event
 from ok import TaskDisabledException
 from qfluentwidgets import FluentIcon
 
+from src import text_white_color
 from src.combat.BaseCombatTask import BaseCombatTask
 from src.heist_path.HeistPathA import HeistPathA
+from src.Labels import Labels
 from src.tasks.NTEOneTimeTask import NTEOneTimeTask
 from src.utils import game_filters as gf
+from src.utils import image_utils as iu
 
 
 class AbortException(Exception):
@@ -20,6 +23,7 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
     CONF_PATH = "路径"
     CONF_FIGHTER = "战斗角色"
     CONF_RUNNER = "跑图角色"
+    LOCK_PICK_MATCH_THRESHOLD = 0.75
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -56,7 +60,12 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
         )
         self._scroll_switch = False
         self._scroll_count = 0
+        self._scroll_time = 0
+        self.dead_fighter = []
         self.quick_pick = Event()
+        self._held_keys = set()
+        self._spam_key_loop_stop = Event()
+        self._spam_key_loop_token = 0
 
         self.label = 0
         self.error = 0
@@ -72,8 +81,6 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
             raise
 
     def do_run(self):
-        self.log_info("spam_key_loop start")
-        self.submit_periodic_task(0.01, self._spam_key_loop)
         self.label = ""
         self.error = 0
 
@@ -84,6 +91,7 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
         total = int(self.config.get(self.CONF_LOOP_COUNT, 1))
         endless = total == 0
         while endless or count < total:
+            self.dead_fighter = []
             count += 1
             self.label = f"第 {count} 轮"
             round_text = "∞" if endless else f"{total}"
@@ -95,7 +103,7 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
 
             if self.wait_until(self.find_interac, time_out=20, raise_if_not_found=True):
                 self.enter_heist()
-                if not self.wait_until(self.in_heist, time_out=120):
+                if not self.wait_until(self.in_heist, time_out=600):
                     self.heist_error()
                     continue
 
@@ -167,30 +175,31 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
             pre_action=action,
             time_out=20,
         )
-        self.sleep(1)
+        self.sleep(0.5)
         self.wait_until(
             lambda: not in_panel(),
             pre_action=lambda: self.operate_click(0.7734, 0.8824, interval=1),
             time_out=20,
         )
-        self.sleep(1)
+        self.sleep(0.5)
+
+    def has_exit_panel(self):
+        return self.ocr(0.2602, 0.2639, 0.3520, 0.3257, match=re.compile("安全撤离"))
 
     # 离开粉爪副本
     def exit_heist(self):
-        def in_exit_panel():
-            return self.ocr(0.2602, 0.2639, 0.3520, 0.3257, match=re.compile("安全撤离"))
 
         def in_sum_panel():
             return self.ocr(0.4496, 0.8354, 0.5547, 0.8868, match=re.compile("退出"))
 
         self.wait_until(
-            in_exit_panel,
+            self.has_exit_panel,
             pre_action=lambda: self.send_key("f", interval=1),
         )
         self.sleep(1)
         earnfcash, earnpcoin = self.get_earn()
         self.wait_until(
-            lambda: not in_exit_panel(),
+            lambda: not self.has_exit_panel(),
             pre_action=lambda: self.operate_click(0.604, 0.701, interval=1),
         )
         self.sleep(1)
@@ -214,23 +223,56 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
             self.quick_pick.set()
             self._scroll_switch = False
             return
+        self._held_keys.add(key)
         return super().send_key_down(key, after_sleep)
 
     def send_key_up(self, key, after_sleep=0):
         if key == "f":
-            self.quick_pick.clear()
-            if hasattr(self.quick_pick, "ready_at"):
-                del self.quick_pick.ready_at
+            self._reset_quick_pick()
             return
-        return super().send_key_up(key, after_sleep)
+        try:
+            return super().send_key_up(key, after_sleep)
+        finally:
+            self._held_keys.discard(key)
 
-    def _spam_key_loop(self):
+    def _start_spam_key_loop(self):
+        self._spam_key_loop_token += 1
+        token = self._spam_key_loop_token
+        self._spam_key_loop_stop.clear()
+        self.log_info("spam_key_loop start")
+        self.submit_periodic_task(0.01, self._spam_key_loop, token)
+
+    def _stop_spam_key_loop(self):
+        self._spam_key_loop_stop.set()
+        self._reset_quick_pick()
+
+    def _reset_quick_pick(self):
+        self.quick_pick.clear()
+        if hasattr(self.quick_pick, "ready_at"):
+            del self.quick_pick.ready_at
+
+    def _release_held_keys(self):
+        held_keys = list(self._held_keys)
+        self._held_keys.clear()
+        for key in held_keys:
+            try:
+                super().send_key_up(key)
+            except Exception as e:
+                self.log_error(f"release held key {key} failed", e)
+
+    def _spam_key_loop(self, token):
+        if (
+            token != self._spam_key_loop_token
+            or self._spam_key_loop_stop.is_set()
+            or not self.enabled
+            or not self.running
+        ):
+            self.log_info("spam_key_loop stop")
+            return False
+
         if self.quick_pick.is_set() and time.time() >= getattr(self.quick_pick, "ready_at", 0):
             self.send_key("f", interval=0.25, down_time=0.002)
             self._alternate_scroll(interval=0.25)
-        if not self.enabled or not self.running:
-            self.log_info("spam_key_loop stop")
-            return False
 
     def _alternate_scroll(self, interval=0):
         if time.time() - self._scroll_time >= interval:
@@ -249,7 +291,15 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
         path_name = self.config.get(self.CONF_PATH)
         path_cls = self.paths.get(path_name, next(iter(self.paths.values())))
         path = path_cls(self)
-        return path.run_path()
+        self._start_spam_key_loop()
+        try:
+            return path.run_path()
+        finally:
+            self._stop_spam_key_loop()
+            self._release_held_keys()
+
+    def ensure_in_team(self):
+        self.wait_until(self.is_in_team, pre_action=lambda: self.send_key("esc", interval=2))
 
     def check_current_floor(self, floor=1):
         """检查是否在指定楼层"""
@@ -260,41 +310,41 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
         raise AbortException(f"not in floor {floor}")
 
     def in_heist(self):
-        ret = self.is_in_team() and self.ocr(
-            0.023, 0.340, 0.084, 0.379, match=re.compile("本局收益")
-        )
+        ret = self.is_in_team() and self.find_one(Labels.heist_timer)
         return ret
 
     def switch_to_fighter(self):
         keys = self.config.get(self.CONF_FIGHTER, [])
+        keys = keys[::-1]
+        set_dead = set(self.dead_fighter)
+        keys = [item for item in keys if item not in set_dead]
+        _key = None
         for key in keys:
             self.send_key(key)
-            if self.wait_until(lambda: not self.is_in_team(), time_out=0.5):
+            if self.wait_until(lambda: not self.is_in_team(), time_out=0.6, settle_time=0.2):
                 self.log_info(f"char {key} is dead")
-                self.wait_until(
-                    self.is_in_team, pre_action=lambda: self.send_key("esc", interval=2)
-                )
+                self.ensure_in_team()
             else:
+                _key = key
                 break
         else:
             raise AbortException(f"fighter {keys} dead or empty")
+        return _key
 
     def switch_to_runner(self):
         keys = self.config.get(self.CONF_RUNNER, [])
         for key in keys:
             self.send_key(key)
-            if self.wait_until(lambda: not self.is_in_team(), time_out=0.5):
+            if self.wait_until(lambda: not self.is_in_team(), time_out=0.6, settle_time=0.2):
                 self.log_info(f"char {key} is dead")
-                self.wait_until(
-                    self.is_in_team, pre_action=lambda: self.send_key("esc", interval=2)
-                )
+                self.ensure_in_team()
             else:
                 break
         else:
             raise AbortException(f"runner {keys} dead or empty")
 
     def jump_combat_once(self):
-        self.switch_to_fighter()
+        _key = self.switch_to_fighter()
         self.wait_until(self.has_health_bar)
         deadline = time.time() + 60
         settle = -1
@@ -304,6 +354,12 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
                 self.sleep(0.25)
                 self.click()
                 self.sleep(0.4)
+                if not self.is_in_team():
+                    self.log_info(f"fighter {_key} dead, try next")
+                    self.dead_fighter.append(_key)
+                    self.ensure_in_team()
+                    _key = self.switch_to_fighter()
+                self.send_key(_key)
                 self.next_frame()
             else:
                 self.sleep(0.1)
@@ -318,21 +374,75 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
             raise AbortException("timeout for combat_once")
         self.switch_to_runner()
 
-    def wait_send_interac(self, direction="w", key_up_sleep=0.7, is_lock=False):
-        """test"""
-        self.wait_until(self.find_interac)
-        self.send_key_up(direction)
+    def wait_send_interac(self, direction=None, key_up_sleep=0.7, is_lock=False, time_out=10):
+        ret = self.wait_until(self.find_interac, time_out=time_out)
+        if direction is not None:
+            self.send_key_up(direction)
+        if not ret:
+            return False
         self.sleep(key_up_sleep)
         self.wait_until(
             lambda: not self.find_interac(), pre_action=lambda: self.send_key("f", interval=1)
         )
         if is_lock:
-            return not self.wait_until(self.find_interac, time_out=4.7)
+            self.wait_until(self.find_lock_pick, time_out=2)
+            self.wait_until(lambda: not self.find_lock_pick(), settle_time=0.5)
+            return not self.find_interac()
         return True
 
-    # def find_interac_text(self, text):
-    #     box = self.find_interac()
-    #     if not box:
-    #         return False
-    #     box = box.copy(x_offset=box.width, width_offset=box.width * 3)
-    #     return bool(self.ocr(box=box, match=re.compile(text)))
+    def walk_and_loot_safe(self, direction=None, time_out=10, hold=False):
+        deadline = time.time() + time_out
+        if direction is not None:
+            self.send_key_down(direction)
+        while time.time() < deadline:
+            if self.find_lock_pick():
+                lock_pick = time.time()
+                if direction is not None:
+                    self.send_key_up(direction)
+                self.wait_until(lambda: not self.find_lock_pick(), settle_time=0.5)
+                self.sleep(0.50)
+                deadline += time.time() - lock_pick + 0.2
+                if direction is not None:
+                    self.send_key_down(direction)
+            self.next_frame()
+        if direction is not None and not hold:
+            self.send_key_up(direction)
+
+    def find_lock_pick(self):
+        feature = self.get_feature_by_name(Labels.heist_lock_pick).mat
+        box = self.get_box_by_name(Labels.heist_lock_pick).scale(1.5)
+        self.draw_boxes(boxes=box, color="blue")
+        cropped = box.crop_frame(self.frame)
+        cropped = iu.create_color_mask(cropped, text_white_color)
+        # iu.show_images([feature, cropped], ["feature", "cropped"])
+        res, _ = self._find_rotated_template(
+            feature,
+            cropped,
+            threshold=self.LOCK_PICK_MATCH_THRESHOLD,
+            cache_key=Labels.heist_lock_pick,
+        )
+        return len(res) >= 1
+
+    def is_exit_open(self, direction=None):
+        if self.wait_until(self.find_interac):
+            if direction is not None:
+                self.send_key_up(direction)
+                self.sleep(0.40)
+            ret = self.wait_until(
+                self.has_exit_panel, pre_action=lambda: self.send_key("f", interval=1), time_out=2.6
+            )
+            if ret:
+                self.ensure_in_team()
+            return ret
+        else:
+            raise AbortException("not found exit interaction")
+
+    def walk_until_exit(self, direction=None, time_out=10):
+        if direction is not None:
+            self.send_key_down(direction)
+        self.wait_until(
+            self.has_exit_panel, pre_action=self.send_key("f", interval=0.25), time_out=time_out
+        )
+        if direction is not None:
+            self.send_key_up(direction)
+        self.exit_heist()

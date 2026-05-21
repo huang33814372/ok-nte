@@ -15,6 +15,7 @@ else:
 
 class HeistPath(_HeistPathTaskProxy):
     def __init__(self, task: AutoHeistTask):
+        self.exit_state = {1: False, 2: False, 3: False, 4: False, }
         self.task = task
 
     def __getattr__(self, name: str) -> Any:

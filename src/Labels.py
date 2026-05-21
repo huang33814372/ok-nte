@@ -37,6 +37,8 @@ class Labels(str, Enum):
     fish_start = 'fish_start'
     fising_sucess = 'fising_sucess'
     health_bar_slash = 'health_bar_slash'
+    heist_lock_pick = 'heist_lock_pick'
+    heist_timer = 'heist_timer'
     interactable = 'interactable'
     is_current_char = 'is_current_char'
     launcher_start_game = 'launcher_start_game'

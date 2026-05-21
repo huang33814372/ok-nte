@@ -149,6 +149,12 @@
             "file_name": "images/6.png",
             "width": 2560,
             "height": 1440
+        },
+        {
+            "id": 26,
+            "file_name": "images/1.png",
+            "width": 2560,
+            "height": 1440
         }
     ],
     "annotations": [
@@ -827,6 +833,32 @@
             ],
             "area": 7128,
             "iscrowd": 0
+        },
+        {
+            "id": 53,
+            "image_id": 26,
+            "category_id": 53,
+            "bbox": [
+                1493,
+                719,
+                67,
+                85
+            ],
+            "area": 5695,
+            "iscrowd": 0
+        },
+        {
+            "id": 54,
+            "image_id": 26,
+            "category_id": 54,
+            "bbox": [
+                63,
+                412,
+                47,
+                49
+            ],
+            "area": 2303,
+            "iscrowd": 0
         }
     ],
     "categories": [
@@ -1088,6 +1120,16 @@
         {
             "id": 52,
             "name": "fish_hold",
+            "supercategory": ""
+        },
+        {
+            "id": 53,
+            "name": "heist_lock_pick",
+            "supercategory": ""
+        },
+        {
+            "id": 54,
+            "name": "heist_timer",
             "supercategory": ""
         }
     ]

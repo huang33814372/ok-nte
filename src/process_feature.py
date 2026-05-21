@@ -24,3 +24,5 @@ def process_feature(feature_name, feature: Feature):
             feature.mat = iu.binarize_bgr_by_brightness(feature.mat, threshold=245)
         case Labels.fish_start:
             feature.mat = iu.create_color_mask(feature.mat, text_white_color)
+        case Labels.heist_lock_pick:
+            feature.mat = iu.create_color_mask(feature.mat, text_white_color)
