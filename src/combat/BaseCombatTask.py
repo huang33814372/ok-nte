@@ -208,7 +208,10 @@ class BaseCombatTask(CombatCheck):
                     continue
                 to_minus += duration - freeze_time
         if to_minus != 0:
-            self.log_debug(f"time_elapsed_accounting_for_freeze to_minus {to_minus}")
+            self.run_with_interval(
+                lambda: self.log_debug(f"time_elapsed_accounting_for_freeze to_minus {to_minus}"),
+                0.5,
+            )
         return time.time() - start - to_minus
 
     def refresh_cd(self):
@@ -592,7 +595,7 @@ class BaseCombatTask(CombatCheck):
     def sleep_check(self):
         if self.skip_sleep_check:
             return
-        
+
         if SoundCombatContext.should_interrupt_combat():
             self.log_info("Combat sleep interrupted by sound action")
             SoundCombatContext().execute_pending_action()
