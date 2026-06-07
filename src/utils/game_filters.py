@@ -55,3 +55,6 @@ def current_char_filter(cv_image):
 
 def isolate_text_to_black(cv_image):
     return iu.create_color_mask(cv_image, text_black_color, invert=True)
+
+def ultimate_ready_filter(cv_image):
+    return iu.binarize_bgr_by_brightness(cv_image, threshold=128, to_bgr=False)
