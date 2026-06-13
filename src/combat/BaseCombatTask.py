@@ -70,6 +70,8 @@ class BaseCombatTask(CombatCheck):
             **kwargs: 传递给父类的关键字参数。
         """
         super().__init__(*args, **kwargs)
+        self.skip_sleep_check = False
+        self.sleep_check_interval = 0.1
         self.chars: list[BaseChar] = []
         self.mouse_pos = None  # 当前鼠标位置
         self.combat_start = 0  # 战斗开始时间戳
@@ -782,19 +784,42 @@ class BaseCombatTask(CombatCheck):
         if current_char:
             self.get_current_char().on_combat_end(self.chars)
 
+    def _wrap_wait_until_action(self, action):
+        def wrapped_action():
+            if action is not None:
+                action()
+            self.sleep(0.001)
+
+        return wrapped_action
+
+    def wait_until(
+        self,
+        condition,
+        time_out=0,
+        pre_action=None,
+        post_action=None,
+        settle_time=-1,
+        raise_if_not_found=False,
+    ):
+        return super().wait_until(
+            condition,
+            time_out=time_out,
+            pre_action=self._wrap_wait_until_action(pre_action),
+            post_action=post_action,
+            settle_time=settle_time,
+            raise_if_not_found=raise_if_not_found,
+        )
+
     def sleep_check(self):
         if self.skip_sleep_check:
             return
 
-        if SoundCombatContext.should_interrupt_combat():
+        if not self.in_animation and SoundCombatContext.should_interrupt_combat():
             self.log_info("Combat sleep interrupted by sound action")
             SoundCombatContext().execute_pending_action()
             SoundCombatContext.wait_for_resume()
 
-        if self._in_combat:
-            self.next_frame()
-            if not self.in_combat():
-                self.raise_not_in_combat("sleep check not in combat")
+        self.check_combat()
 
     def _apply_sound_config(self):
         if self.sound_config:

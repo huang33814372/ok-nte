@@ -541,7 +541,7 @@ class BaseChar:
                         result["status"] = status
                         return result
 
-            self.task.next_frame()
+            self.sleep(0.01)
 
     def _check_available_action_result(
         self,
@@ -590,8 +590,6 @@ class BaseChar:
             if self.task.combat_detect_uncertain:
                 self.logger.info("click_ultimate blocked by combat_detect_uncertain")
             while self.task.combat_detect_uncertain:
-                self.task.next_frame()
-                self.check_combat()
                 self.click_with_interval()
                 self.sleep(0.1)
 
@@ -955,14 +953,16 @@ class BaseChar:
             direction_key (str, optional): 如果指定，则在点击期间同时按下此键
                 （如 'w'、'a'、's'、'd'）。
         """
-        if direction_key is not None:
-            self.task.send_key_down(direction_key)
-            self.task.next_frame()
-        start = time.time()
-        while time.time() - start < duration:
-            self.click(interval=interval, key="right")
-        if direction_key is not None:
-            self.task.send_key_up(direction_key)
+        try:
+            if direction_key is not None:
+                self.task.send_key_down(direction_key)
+                self.sleep(0.1)
+            start = time.time()
+            while time.time() - start < duration:
+                self.click(interval=interval, key="right")
+        finally:
+            if direction_key is not None:
+                self.task.send_key_up(direction_key)
 
     def normal_attack(self):
         """执行一次普通攻击。"""
