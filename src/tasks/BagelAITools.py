@@ -12,6 +12,24 @@ from qfluentwidgets import FluentIcon
 from src.tasks.BaseNTETask import BaseNTETask
 from src.tasks.NTEOneTimeTask import NTEOneTimeTask
 
+INS = (
+    "【呗果智能体】\n"
+    "自动模式下将自动发帖回帖点赞；\n"
+    "助手模式下可辅助生成文案。\n"
+    "支持调用支持图片输入的模型生成文案。\n"
+    '本地模型配置教程：<a href="https://github.com/HazukiKaguya/BagelAIToolsDev/blob/main/BagelAIToolsModelDeploy.pdf">'
+    "后端服务器部署教程</a>"
+)
+
+EN_INS = (
+    "【BagelAI Tools】\n"
+    "    Automatic mode will automatically post, reply, and like;\n"
+    "    Assistant mode can help generate text.\n"
+    "    Supports calling models that support image input to generate text.\n"
+    '    Local model configuration tutorial: <a href="https://github.com/HazukiKaguya/BagelAIToolsDev/blob/main/BagelAIToolsModelDeploy.pdf">'
+    "Backend server deployment tutorial</a>"
+)
+
 
 class BagelAITools(NTEOneTimeTask, BaseNTETask):
     # ==========================================
@@ -36,7 +54,7 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
         self.name = "呗果智能体"
         self.description = "请详阅使用说明"
         self.icon = FluentIcon.HEART
-        self.instructions = """【呗果智能体】\n自动模式下将自动发帖回帖点赞；\n助手模式下可辅助生成文案。\n支持调用支持图片输入的模型生成文案。\n本地模型配置教程：<a href="https://github.com/HazukiKaguya/BagelAIToolsDev/blob/main/BagelAIToolsModelDeploy.pdf">后端服务器部署教程</a>"""
+        self.instructions = INS if "zh" in self.get_app_locale() else EN_INS
         self.bagel_supported_languages = [
             "zh_CN",
             "zh_TW",
@@ -75,7 +93,7 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
                 self.CONF_GAME_LANG: "请选择游戏所设置的语言",
                 self.CONF_MODEL: "关闭后将降级使用本地词库抽取发帖回复文案",
                 self.CONF_HELPER_MODE: "开启助手模式后, 将只会辅助生成文案",
-                self.CONF_AUTO_AICONFIG: "智能体模式选项\n自动回帖会同时点赞",
+                self.CONF_AUTO_AICONFIG: "自动回帖会同时点赞",
                 self.CONF_MODEL_URL: "文案生成模型调用地址, 需兼容OpenAI接口请求格式",
                 self.CONF_MODEL_API: "未设置请留空, 请勿泄露API_Key!",
                 self.CONF_MODEL_NAME: "需要支持视觉输入的视觉语言模型",
@@ -446,7 +464,7 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
         for i, post in enumerate(posts):
             if self.reply_count >= 5 and self.like_count >= 5:
                 self.log_info("已完成自动回复按赞任务！")
-                return False  # 只是返回掉，因为结束了 
+                return False  # 只是返回掉，因为结束了
             if not self.find_area(area="reply_area"):
                 self.log_info(f"正在点击目标帖子【{post.name}】")
                 self.operate_click(post)
@@ -487,7 +505,7 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
                 self.info_add(self.INFO_LIKE_COUNT, 1)
             elif "自动按赞" in self.auto_config_list and self.like_count < 5:
                 # 点赞
-                self.reply_count = 5 # 避免一直点赞
+                self.reply_count = 5  # 避免一直点赞
                 self.sleep(0.2)
                 self.operate_click(0.53, 0.85)
                 self.like_count += 1
