@@ -6,9 +6,9 @@ from functools import cached_property
 
 import cv2
 import requests
-from ok import TaskDisabledException, get_path_relative_to_exe
 from qfluentwidgets import FluentIcon
 
+from ok import TaskDisabledException, get_path_relative_to_exe
 from src.tasks.BaseNTETask import BaseNTETask
 from src.tasks.NTEOneTimeTask import NTEOneTimeTask
 
@@ -66,13 +66,12 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
             "ru_RU",
         ]  # "ko_KR" 不可用
         get_lang = self.get_app_locale()
-        temp_lang = "zh_CN"
-        if get_lang:
+        if get_lang in self.bagel_supported_languages:
             temp_lang = get_lang
-            if get_lang == "ko_KR":
-                temp_lang = "en_US"
-                self.log_info("ko_KR not support now, switch to en_US")
-        self.model_prompt = self.BASE_BAGEL_I18N["model_prompt"][temp_lang]
+        else:
+            temp_lang = "en_US"
+            self.log_info(f"{get_lang} not support now, switch to {temp_lang}")
+        self.model_prompt = self.BASE_BAGEL_I18N.get("model_prompt", {}).get(temp_lang, {})
         self.supported_languages = ["zh_CN", "zh_TW", "ja_JP", "en_US", "es_ES"]
         self.default_config.update(
             {
@@ -83,9 +82,9 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
                 self.CONF_MODEL_URL: "",
                 self.CONF_MODEL_API: "",
                 self.CONF_MODEL_NAME: "qwen/qwen3-vl-4b",
-                self.CONF_PROMPT_REPLY: self.model_prompt["REPLY"],
-                self.CONF_PROMPT_POST_TITLE: self.model_prompt["POST_TITLE"],
-                self.CONF_PROMPT_POST_CONTENT: self.model_prompt["POST_CONTENT"],
+                self.CONF_PROMPT_REPLY: self.model_prompt.get("REPLY", ""),
+                self.CONF_PROMPT_POST_TITLE: self.model_prompt.get("POST_TITLE", ""),
+                self.CONF_PROMPT_POST_CONTENT: self.model_prompt.get("POST_CONTENT", ""),
             }
         )
         self.config_description.update(
@@ -142,7 +141,7 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
         self.nowview_poster = ""
 
     @cached_property
-    def BASE_BAGEL_I18N(self):
+    def BASE_BAGEL_I18N(self) -> dict[str, dict[str, dict[str, str]]]:
         try:
             _i18n_cache = {}
             json_path = get_path_relative_to_exe("assets", "presets", "bagel.json")
@@ -156,7 +155,7 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
     def def_prompt(self):
         try:
             _prompt_cache = []
-            for lang_data in self.BASE_BAGEL_I18N["model_prompt"].values():
+            for lang_data in self.BASE_BAGEL_I18N.get("model_prompt", {}).values():
                 _prompt_cache.extend(lang_data.values())
         except Exception as e:
             self.log_error("Error loading default prompts", e)
@@ -172,11 +171,13 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
         super().run()
         target_lang = self.config.get(self.CONF_GAME_LANG, "zh_CN")
         if target_lang not in self.bagel_supported_languages:
-            target_lang = "zh_CN"
-        self.bagel_ocr = self.BASE_BAGEL_I18N["bagel_ocr"][target_lang]
-        self.preset_replies = self.BASE_BAGEL_I18N["preset_replies"][target_lang]
-        self.preset_posts = self.BASE_BAGEL_I18N["preset_posts"][target_lang]
-        self.model_prompt = self.BASE_BAGEL_I18N["model_prompt"][target_lang]
+            temp_lang = "en_US"
+            self.log_info(f"{target_lang} not support now, switch to {temp_lang}")
+            target_lang = temp_lang
+        self.bagel_ocr = self.BASE_BAGEL_I18N.get("bagel_ocr", {}).get(target_lang, {})
+        self.preset_replies = self.BASE_BAGEL_I18N.get("preset_replies", {}).get(target_lang, [])
+        self.preset_posts = self.BASE_BAGEL_I18N.get("preset_posts", {}).get(target_lang, [])
+        self.model_prompt = self.BASE_BAGEL_I18N.get("model_prompt", {}).get(target_lang, {})
         self.is_running = False
         self.gallery_total_count = 1
         self.reply_count = 0
@@ -1095,16 +1096,17 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
         else:
             i18n_key = area
 
+        regex_str = self.bagel_ocr.get(i18n_key)
+        match_regex = re.compile(regex_str) if regex_str else None
+
         # 若指定了 action = "click"，则采用 wait_ocr，否则采用 ocr 即可
         if action == "click":
-            match_regex = re.compile(self.bagel_ocr[i18n_key])
             text_area = self.wait_ocr(
                 *ocr_area, match=match_regex, time_out=30, threshold=0.70, raise_if_not_found=True
             )
         elif action == "get_text":
             text_area = self.ocr(*ocr_area)
         else:
-            match_regex = re.compile(self.bagel_ocr[i18n_key])
             text_area = self.ocr(*ocr_area, match=match_regex, threshold=0.70)
         return text_area
 
@@ -1176,7 +1178,7 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
                     "",
                 )
                 if reply_prompt == "" or reply_prompt in self.def_prompt:
-                    reply_prompt = self.model_prompt["REPLY"]
+                    reply_prompt = self.model_prompt.get("REPLY", "")
                 model_reply = self.get_vlm_response(
                     reply_prompt, temp_img_path, post_title=title_text, author=author_name
                 )
@@ -1186,7 +1188,7 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
                 self.log_info(f"VLM不可用({e})，降级到本地词库...")
 
         # 模型生成不可用时，使用本地词库随机回复
-        base_reply = random.choice(self.preset_replies)
+        base_reply = random.choice(self.preset_replies) if self.preset_replies else "..."
 
         # 40% 概率用对方昵称替换通称
         if author_name and author_name != "呗主" and random.random() < 0.4:
@@ -1225,14 +1227,14 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
                         "",
                     )
                     if post_prompt == "" or post_prompt in self.def_prompt:
-                        post_prompt = self.model_prompt["POST_TITLE"]
+                        post_prompt = self.model_prompt.get("POST_TITLE", "")
                 else:
                     post_prompt = self.config.get(
                         self.CONF_PROMPT_POST_CONTENT,
                         "",
                     )
                     if post_prompt == "" or post_prompt in self.def_prompt:
-                        post_prompt = self.model_prompt["POST_CONTENT"]
+                        post_prompt = self.model_prompt.get("POST_CONTENT", "")
                 model_post = self.get_vlm_response(post_prompt, temp_img_path)
                 self.log_info(f"模型生成 | 为所选图片生成{action}: '{model_post}'")
                 if generate_type == "title":
@@ -1242,7 +1244,7 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
                 self.log_info(f"VLM不可用({e})，降级到本地词库...")
 
         # 模型生成不可用时，使用本地词库随机选取
-        base_post = random.choice(self.preset_posts)
+        base_post = random.choice(self.preset_posts) if self.preset_posts else "..."
         self.sleep(1.14)
         self.log_info(f"本地词库 | 为所选图片随机选取{action}: '{base_post}'")
         return base_post
