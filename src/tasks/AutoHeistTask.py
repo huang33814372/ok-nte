@@ -5,9 +5,9 @@ from functools import cached_property
 from threading import Event
 from typing import ClassVar
 
-from ok import TaskDisabledException
 from qfluentwidgets import FluentIcon
 
+from ok import TaskDisabledException
 from src import text_white_color
 from src.combat.BaseCombatTask import BaseCombatTask
 from src.heist_path.HeistEntrancePath import HeistEntrancePath
@@ -40,34 +40,6 @@ class CharacterSwitchState:
         return self.index < len(self.keys)
 
 
-@dataclass(frozen=True)
-class HeistOcrText:
-    DEFAULT_LOCALE: ClassVar[str] = "zh_CN"
-    BY_LOCALE: ClassVar[dict[str, "HeistOcrText"]]
-
-    confirm_exit: str = "确认退出"
-    confirm: str = "确认"
-    challenge_time: str = "挑战时间"
-    safe_extract: str = "安全撤离"
-    exit: str = "退出"
-
-    @classmethod
-    def get(cls, locale: str | None) -> "HeistOcrText":
-        return cls.BY_LOCALE.get(locale or cls.DEFAULT_LOCALE, cls.BY_LOCALE[cls.DEFAULT_LOCALE])
-
-
-HeistOcrText.BY_LOCALE = {
-    HeistOcrText.DEFAULT_LOCALE: HeistOcrText(),
-    "zh_TW": HeistOcrText(
-        confirm_exit="確認退出",
-        confirm="確認",
-        challenge_time="挑戰時間",
-        safe_extract="安全撤離",
-        exit="退出",
-    ),
-}
-
-
 def _inst_line(text: str, color: str = "", *, bold: bool = False, indent: int = 0):
     content = f"{'&nbsp;' * (indent * 4)}{text}"
     if bold:
@@ -79,6 +51,7 @@ def _inst_gap():
     return '<span style="font-size:4px;">&nbsp;</span>'
 
 
+# ruff: disable[E501]
 INST = "<br>".join(
     [
         _inst_line("📍 步骤起点：站在可互动小吱的位置开始", "#FF5555", bold=True),
@@ -110,6 +83,45 @@ INST = "<br>".join(
     ]
 )
 
+EN_INST = "<br>".join(
+    [
+        _inst_line(
+            "📍 Starting Point: Stand at the interactable Chiz to begin", "#FF5555", bold=True
+        ),
+        _inst_line("⚙️ Camera Settings", "#FF5555", bold=True),
+        _inst_line("└─ Controls ➔ Camera Settings", "#FE821D", bold=True, indent=1),
+        _inst_line("├─ Movement Camera Correction: Disabled", "#FE821D", bold=True, indent=2),
+        _inst_line("└─ Press to Reset Camera: Enabled", "#FE821D", bold=True, indent=2),
+        _inst_line("⚠️ Prerequisite: At least one revival item", "#FF5555", bold=True),
+        _inst_line(
+            "🥷 Avoid Combat: Skia [Hold Shift] / Hotori [Hold Attack]", "#FF5555", bold=True
+        ),
+        _inst_gap(),
+        _inst_line("Recommended Settings for Route 1", bold=True),
+        _inst_line("FPS: 60~120", indent=1),
+        _inst_line("Combat Team: Zero / Haniel / Hotori", indent=1),
+        _inst_line("Exploration: Mint", indent=1),
+        _inst_line("Stealth (Optional): Skia / Hotori", indent=1),
+        _inst_gap(),
+        _inst_line("Recommended Settings for Route 2", bold=True),
+        _inst_line(
+            "Graphics: Performance | Resolution: 1080P | FPS: 60 | Frame Interpolation: Off",
+            indent=1,
+        ),
+        _inst_line("Exploration: Mint", indent=1),
+        _inst_line("Stealth (Sakiri):", indent=1),
+        _inst_line(
+            "Combat Team: Sakiri (Required, must be in 1st slot; others flexible, can include Lacrimosa) / Zero / Haniel",
+            indent=2,
+        ),
+        _inst_line("Stealth Character: Skia", indent=2),
+        _inst_line("Stealth (Hotori):", indent=1),
+        _inst_line("Combat Team: Flexible (Any, can include Lacrimosa) / Zero / Haniel", indent=2),
+        _inst_line("Stealth Character: Hotori", indent=2),
+    ]
+)
+# ruff: enable[E501]
+
 
 class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
     CONF_LOOP_COUNT = "循环次数"
@@ -135,8 +147,7 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
         self.name = "自动粉爪大劫案"
         self.icon = FluentIcon.SHOPPING_CART
         self.group_name = "都市闲趣"
-        self.instructions = INST
-        self.supported_languages = ["zh_CN", "zh_TW"]
+        self.instructions = INST if "zh" in self.get_app_locale() else EN_INST
         self.paths = {
             "路径1(路线参考自B站UP: 早柚大魔王丶)": HeistPathA,
             "路径2(在路径1基础上优化了大厅到办公层的路线)": HeistPathB,
@@ -195,10 +206,6 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
         self._aborting_heist = False
 
         self._round_label = ""
-
-    @cached_property
-    def OCR_MATCH_TEXT(self) -> HeistOcrText:
-        return HeistOcrText.get(self.get_app_locale())
 
     def run(self):
         super().run()
@@ -506,45 +513,22 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
         self._aborting_heist = True
         self._reset_route_checks()
 
-        def find_popup():
-            return self.ocr(
-                0.4516, 0.3069, 0.5473, 0.3792,
-                match=re.compile(self.OCR_MATCH_TEXT.confirm_exit),
-            )
-
         try:
-            if not self.wait_until(
-                lambda: self.is_in_team_outside_heist() or find_popup(),
-                pre_action=lambda: self.send_key("esc", action_name="quit_heist", interval=2),
+            self.ensure_main(in_world=False)
+
+            if self.is_in_team_outside_heist():
+                self.log_round_info("当前已在队伍界面且不在粉爪副本中，跳过退出副本")
+                return True
+
+            if self.wait_click_confirm(
+                lambda: self.send_key("esc", action_name="quit_heist", interval=2),
+                range=(0.6465, 0.6125, 0.7047, 0.7049),
                 time_out=60,
                 raise_if_not_found=False,
             ):
                 self.log_round_info("退出粉爪副本超时，跳过本轮清理")
                 return False
-            if self.is_in_team_outside_heist():
-                self.log_round_info("当前已在队伍界面且不在粉爪副本中，跳过退出副本")
-                return True
 
-            btn = self.wait_ocr(
-                0.50, 0.60, 0.70, 0.70,
-                match=re.compile(self.OCR_MATCH_TEXT.confirm),
-                time_out=60,
-                raise_if_not_found=False,
-            )
-            if not btn:
-                self.log_round_info("未找到退出确认按钮，跳过本轮清理")
-                return False
-            if not self.wait_until(
-                lambda: not find_popup(),
-                pre_action=lambda: self.operate_click(btn, action_name="quit_heist", interval=1),
-                time_out=60,
-                raise_if_not_found=False,
-            ):
-                self.log_round_info("确认退出粉爪副本超时，跳过本轮清理")
-                return False
-            if not self.wait_in_team(time_out=60, raise_if_not_found=False):
-                self.log_round_info("等待回到队伍界面超时，跳过本轮清理")
-                return False
             self.log_round_info("已退出粉爪副本")
             return True
         finally:
@@ -554,12 +538,10 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
     # 进入粉爪副本
     def enter_heist(self):
         skip_task = self.get_task_by_class(SkipDialogTask)
+        box = self.box_of_screen(0.916, 0.083, 0.941, 0.128, hcenter=True)
 
         def in_panel():
-            return self.ocr(
-                0.625, 0.483, 0.685, 0.525,
-                match=re.compile(self.OCR_MATCH_TEXT.challenge_time),
-            )
+            return self.find_one(Labels.close_button, box=box)
 
         def action():
             if not self.is_in_team():
@@ -584,10 +566,7 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
 
     def has_extract_panel(self):
         """检查当前画面是否出现“安全撤离”面板。"""
-        return self.ocr(
-            0.2602, 0.2639, 0.3520, 0.3257,
-            match=re.compile(self.OCR_MATCH_TEXT.safe_extract),
-        )
+        return self.find_one(Labels.heist_exit)
 
     def is_in_team_outside_heist(self):
         """判断角色已回到队伍界面，但已经不在粉爪副本内。"""
@@ -595,13 +574,6 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
 
     # 离开粉爪副本
     def exit_heist(self):
-
-        def in_sum_panel():
-            return self.ocr(
-                0.4496, 0.8354, 0.5547, 0.8868,
-                match=re.compile(self.OCR_MATCH_TEXT.exit),
-            )
-
         self.wait_until(
             lambda: self.is_in_team_outside_heist() or self.has_extract_panel(),
             pre_action=lambda: self.send_key("f", interval=1),
@@ -617,14 +589,7 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
             pre_action=lambda: self.operate_click(0.604, 0.701, interval=1),
         )
         self.sleep(1)
-        self.wait_until(
-            in_sum_panel,
-        )
-        self.sleep(1)
-        self.wait_until(
-            lambda: not in_sum_panel(),
-            pre_action=lambda: self.operate_click(0.501, 0.864, interval=1),
-        )
+        self.wait_click_confirm(range=(0.5359, 0.8139, 0.5852, 0.9062))
         self._add_rewards_to_summary(*rewards)
         self.sleep(1)
         self.wait_in_team(time_out=600)
@@ -980,11 +945,11 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
             if self.wait_until(
                 lambda: not self.is_in_team(),
                 pre_action=lambda: self.send_key("f", interval=2),
-                time_out=1.75,
+                time_out=2,
             ):
                 ret = self.wait_until(
                     self.has_extract_panel,
-                    time_out=1.75,
+                    time_out=2,
                 )
                 if ret:
                     self.sleep(0.30)

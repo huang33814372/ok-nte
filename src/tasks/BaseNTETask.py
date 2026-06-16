@@ -12,8 +12,8 @@ import win32api
 import win32con
 import win32gui
 import win32process
-from ok import BaseTask, Box, CannotFindException, Logger, WaitFailedException, og, safe_get
 
+from ok import BaseTask, Box, CannotFindException, Logger, WaitFailedException, og, safe_get
 from src.Labels import Labels
 from src.scene.NTEScene import NTEScene
 from src.scene.ScreenPosition import ScreenPosition
@@ -1054,17 +1054,21 @@ class BaseNTETask(CharUIMixin, BaseTask):
     def wait_click_confirm(
         self,
         action: Any | None = None,
-        range: tuple[float, float, float, float] | None = None,
+        range: tuple[float, float, float, float] | Box | None = None,
+        time_out=10,
         settle_time=0.25,
         raise_if_not_found=True,
     ):
         if range is None:
             box = self.main_viewport
+        elif isinstance(range, Box):
+            box = range
         else:
             box = self.box_of_screen(*range, hcenter=True)
         button = self.wait_until(
             lambda: self.find_confirm(box=box),
             pre_action=action,
+            time_out=time_out,
             settle_time=settle_time,
             raise_if_not_found=raise_if_not_found,
         )
@@ -1074,6 +1078,7 @@ class BaseNTETask(CharUIMixin, BaseTask):
         result = self.wait_until(
             lambda: not self.find_confirm(box=box),
             pre_action=lambda: self.operate_click(button, interval=1),
+            time_out=time_out,
             settle_time=settle_time,
             raise_if_not_found=raise_if_not_found,
         )
