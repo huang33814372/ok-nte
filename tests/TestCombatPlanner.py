@@ -127,6 +127,9 @@ class FakeChar:
     def is_cycle_full(self):
         return self._cycle_full
 
+    def time_elapsed_accounting_for_freeze(self, start, intro_motion_freeze=False):
+        return 0
+
     def continues_normal_attack(self, duration):
         self.waited = duration
 
