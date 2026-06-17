@@ -179,10 +179,16 @@ class LauncherTask(BaseNTETask):
                         deadline = self._extend_deadline_for_update(deadline, loop_start)
                     continue
 
+            box = self.box_of_screen(0.660, 0.306, 0.691, 0.378)
+            if btn := self.find_one(Labels.launcher_popup_close, box=box):
+                self.click(btn, after_sleep=2)
+                continue
+
             if button_state == LauncherButtonState.START:
                 ready_other_count = 0
                 update_in_progress = False
-                self._click_launcher_start_button(button)
+                self.log_info(f"Found launcher Start Game button: {button}")
+                self.click(button, after_sleep=2)
                 start_click_pending = True
                 if self._is_launcher_minimized():
                     self.log_info("Launcher minimized after Start Game click")
@@ -267,16 +273,6 @@ class LauncherTask(BaseNTETask):
             threshold=0.85,
         )
 
-    def _click_launcher_start_button(self, start_button):
-        self.log_info(f"Found launcher Start Game button: {start_button}")
-        self.click(start_button, after_sleep=2)
-        if not self._is_launcher_minimized():
-            self.click(0.6062, 0.5938, after_sleep=0.2)  # close popup
-            self.click(0.5269, 0.6122, after_sleep=2)  # close popup
-        if not self._is_launcher_minimized():
-            self.click(0.5269, 0.6122, after_sleep=0.2)  # close popup
-            self.click(0.6062, 0.5938, after_sleep=2)  # close popup
-
     def _launcher_button_ready(self):
         box = self.box_of_screen(0.8137, 0.8678, 0.8387, 0.9022, name="launcher_button")
         per = self.calculate_color_percentage(launcher_btn_ready_color, box)
@@ -297,12 +293,24 @@ class LauncherTask(BaseNTETask):
         return bool(win32gui.IsIconic(launcher_hwnd) or not win32gui.IsWindowVisible(launcher_hwnd))
 
     def _wait_for_game_and_capture(self, time_out=600, settle_window=True):
-        self.log_info(f"Waiting for game process for up to {time_out}s")
-        if not self._wait_for_process(GAME_EXE, time_out=time_out, settle_window=settle_window):
-            self.log_error("Timed out waiting for game process")
-            raise TaskDisabledException("Timed out waiting for game process")
-        self.log_info("Game process found; switching capture to game")
-        self._capture_game()
+        _attempt = 3
+        for i in range(_attempt):
+            self.log_info(f"Waiting for game process for up to {time_out}s")
+            if not self._wait_for_process(GAME_EXE, time_out=time_out, settle_window=settle_window):
+                self.log_error("Timed out waiting for game process")
+                raise TaskDisabledException("Timed out waiting for game process")
+            self.log_info("Game process found; switching capture to game")
+            try:
+                self._capture_game()
+            except Exception as e:
+                if str(e) == "Cannot find window":
+                    if i < _attempt:
+                        self.log_error(f"Cannot find window, attempt for {i + 1}/3")
+                        continue
+                    else:
+                        raise e
+                else:
+                    raise e
         time_out = 10
         deadline = time.time() + time_out
         while time.time() < deadline:
