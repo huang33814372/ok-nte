@@ -788,17 +788,7 @@ class CombatPlanner:
         profile = char.describe_role()
         if profile.max_field_time <= 0:
             return None
-        if getattr(char, "last_perform", 0) <= 0:
-            elapsed = 0
-        else:
-            try:
-                elapsed = char.time_elapsed_accounting_for_freeze(char.last_perform)
-            except AttributeError:
-                elapsed = context.task.time_elapsed_accounting_for_freeze(char.last_perform)
-        field_time = profile.max_field_time - elapsed
-        if field_time <= 0:
-            return None
-        duration = min(field_time, 4)
+        duration = min(profile.max_field_time, 4)
         return ActionIntent(
             name="planner_field_time",
             tags={ActionTag.FIELD_TIME, ActionTag.DAMAGE},
@@ -809,7 +799,9 @@ class CombatPlanner:
         )
 
     def _execute_field_time(self, char: "BaseChar", duration: float) -> ActionResult:
-        char.continues_normal_attack(duration)
+        duration -= char.time_elapsed_accounting_for_freeze(char.last_perform)
+        if duration > 0:
+            char.continues_normal_attack(duration)
         return ActionResult(
             name="planner_field_time",
             success=True,
