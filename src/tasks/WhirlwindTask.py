@@ -69,11 +69,13 @@ class WhirlwindTask(NTEOneTimeTask, BaseCombatTask):
             self.send_key_up("w")
         with self.skip_sleep_checks() as skip:
             skip.check_combat = True
-            while self.is_boss():
+            while True:
                 self.click()
                 self.sleep(0.15)
                 self.send_key(self.get_ultimate_key())
                 self.sleep(0.15)
+                if not self.is_boss() and self.is_in_team():
+                    break
         self.sleep(2)
         self.wait_in_team(time_out=60, settle_time=1)
         self.click(key="middle")
@@ -120,7 +122,7 @@ class WhirlwindTask(NTEOneTimeTask, BaseCombatTask):
     def _fine_tune_navigation(self, side_key, angle_diff):
         if angle_diff > 90:
             self.send_key(side_key)
-            self.sleep(0.2)
+            self.sleep(0.5)
             return
         else:
             try:
@@ -131,9 +133,9 @@ class WhirlwindTask(NTEOneTimeTask, BaseCombatTask):
             self.sleep(0.05)
 
         self.click(key="middle")
-        self.sleep(0.2)
+        self.sleep(0.5)
         self.send_key("w")
-        self.sleep(1)
+        self.sleep(0.5)
         self.next_frame()
 
     def _release_navigation_keys(self):
