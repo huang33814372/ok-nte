@@ -29,7 +29,7 @@ class NTEInteraction(PostMessageInteraction):
         self.user32 = ctypes.windll.user32
         self.qwerty_physical_key_mapper = QwertyPhysicalKeyMapper()
         self._disable_key_mapping = 0
-        self._activate_require = False
+        self._activate_require = True
         self.hwnd_window.visible_monitors.append(self)
 
     def on_visible(self, visible):

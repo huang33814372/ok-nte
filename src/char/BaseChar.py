@@ -515,12 +515,12 @@ class BaseChar:
         self.logger.debug(f"switch_other_char on_combat_end {self.index} switch end")
 
     def sleep(self, sec, sleep_check=True):
-        try:
-            if not sleep_check:
-                self.task.skip_sleep_check = True
+        if not sleep_check:
+            with self.task.skip_sleep_checks() as skip:
+                skip.all = True
+                self.task.sleep(sec)
+        else:
             self.task.sleep(sec)
-        finally:
-            self.task.skip_sleep_check = False
 
     def alert_skill_failed(self):
         self.task.log_error(
@@ -632,6 +632,8 @@ class BaseChar:
             while self.task.combat_detect_uncertain:
                 self.click_with_interval()
                 self.sleep(0.1)
+            else:
+                self.logger.info("click_ultimate unblocked")
         else:
             self._wait_for_ultimate_ready(wait_if_no_cd)
 
@@ -677,14 +679,16 @@ class BaseChar:
             if send_click
             else None
         )
-        animated = self._wait_action_animation(
-            start=start,
-            timeout=7,
-            on_wait=ultimate_animation_click,
-        )
-        clicked = clicked or animated
+        with self.task.skip_sleep_checks() as skip:
+            skip.all = True
+            animated = self._wait_action_animation(
+                start=start,
+                timeout=7,
+                on_wait=ultimate_animation_click,
+            )
+            clicked = clicked or animated
 
-        duration = self._wait_ultimate_unfreeze(start)
+            duration = self._wait_ultimate_unfreeze(start)
         self._ultimate_available = False
         if clicked:
             self.logger.info(f"click_ultimate end {duration}")
@@ -696,7 +700,7 @@ class BaseChar:
             self.sleep(0.1)
 
     def _wait_ultimate_unfreeze(self, start):
-        self.logger.debug("waiting for time unfrozen")
+        self.logger.info("waiting for ultimate unfrozen")
         self.task.wait_until(
             lambda: self.has_cd("ultimate"), post_action=self.click_with_interval, time_out=2
         )
