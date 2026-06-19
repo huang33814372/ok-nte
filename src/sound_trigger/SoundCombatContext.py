@@ -7,11 +7,23 @@ from src.sound_trigger.DodgeCounterTrigger import DodgeCounterTrigger
 
 if TYPE_CHECKING:
     from src.sound_trigger.SoundListener import SoundListener
-    
+
 logger = Logger.get_logger(__name__)
 
 
 _ACTION_UNSET = object()
+
+
+def _game_audio_process_name() -> str:
+    try:
+        from src import GAME_EXE
+
+        return GAME_EXE
+    except Exception as exc:
+        logger.warning(
+            f"Failed to read GAME_EXE from src package, using HTGame.exe: {exc}"
+        )
+        return "HTGame.exe"
 
 
 class SoundCombatContext:
@@ -19,7 +31,7 @@ class SoundCombatContext:
     _lock = threading.Lock()
     _combat_interrupt = threading.Event()
     _action_complete = threading.Event()
-    _sound_action_window = 1
+    _sound_action_window = 0.25
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -133,10 +145,12 @@ class SoundCombatContext:
             if not (0.0 <= counter_attack_threshold <= 1.0):
                 raise ValueError("counter_attack_threshold must be between 0.0 and 1.0")
 
+            audio_process_name = _game_audio_process_name()
             self._config = {
                 "sample_path": sample_path,
                 "counter_attack_sample_path": counter_attack_sample_path,
                 "dodge_all_attacks": dodge_all_attacks,
+                "audio_process_name": audio_process_name,
                 "threshold": threshold,
                 "counter_attack_threshold": counter_attack_threshold,
             }
@@ -147,6 +161,7 @@ class SoundCombatContext:
                 counter_attack_sample_path=counter_attack_sample_path,
                 threshold=threshold,
                 counter_attack_threshold=counter_attack_threshold,
+                process_name=audio_process_name,
             )
 
             self._trigger = DodgeCounterTrigger(

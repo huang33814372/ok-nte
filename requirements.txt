@@ -5,13 +5,13 @@ audioread==3.1.0
 certifi==2026.2.25
     # via requests
 cffi==2.0.0
-    # via
-    #   soundcard
-    #   soundfile
+    # via soundfile
 charset-normalizer==3.4.7
     # via requests
 comtypes==1.4.16
-    # via pycaw
+    # via
+    #   ok-nte (pyproject.toml)
+    #   pycaw
 darkdetect==0.8.0
     # via pyside6-fluent-widgets
 decorator==5.2.1
@@ -53,7 +53,6 @@ numpy==2.3.5
     #   scikit-learn
     #   scipy
     #   shapely
-    #   soundcard
     #   soundfile
     #   soxr
     #   tifffile
@@ -82,10 +81,13 @@ pillow==12.2.0
     #   scikit-image
 platformdirs==4.5.1
     # via pooch
+polib==1.2.0
+    # via ok-nte (pyproject.toml)
 pooch==1.8.2
     # via librosa
 psutil==7.2.2
     # via
+    #   ok-nte (pyproject.toml)
     #   ok-script
     #   pycaw
 pyappify==1.0.5
@@ -140,8 +142,6 @@ shiboken6==6.9.1
     #   pyside6-essentials
 six==1.17.0
     # via pynput
-soundcard==0.4.6
-    # via ok-nte (pyproject.toml)
 soundfile==0.13.1
     # via librosa
 soxr==1.1.0

@@ -3,6 +3,7 @@
 import os
 
 from ok import Box, ConfigOption
+from src import GAME_EXE
 from src.interaction.NTEInteraction import NTEInteraction
 from src.process_feature import process_feature
 
@@ -90,7 +91,7 @@ config = {
         # },
     },
     "windows": {  # Windows游戏请填写此设置
-        "exe": "HTGame.exe",
+        "exe": GAME_EXE,
         "hwnd_class": "UnrealWindow",
         "interaction": [NTEInteraction],
         # Genshin:某些操作可以后台, 部分游戏支持 PostMessage:可后台点击, 极少游戏支持 ForegroundPostMessage:前台使用PostMessage Pynput/PyDirect:仅支持前台使用
@@ -198,7 +199,7 @@ config = {
     ],
     "custom_tabs": [
         ["src.ui.CharHubTab", "CharHubTab"],
-        ["src.ui.MidiPlayerTab", "MidiPlayerTab"]
+        ["src.ui.MidiPlayerTab", "MidiPlayerTab"],
         # ['src.ui.MyTab', 'MyTab'], #可选, 自定义UI, 显示在侧边栏
     ],
     "scene": ["src.scene.NTEScene", "NTEScene"],

@@ -12,12 +12,10 @@ from qfluentwidgets import FluentIcon
 from ok import TaskDisabledException, og
 from ok.gui.Communicate import communicate
 from ok.util.process import execute, is_admin
+from src import GAME_EXE, LAUNCHER_EXE
 from src.interaction.NTEInteraction import NTEInteraction
 from src.Labels import Labels
 from src.tasks.BaseNTETask import BaseNTETask
-
-GAME_EXE = "HTGame.exe"
-LAUNCHER_EXE = "NTEGame.exe"
 
 
 class DynamicConfig(dict):

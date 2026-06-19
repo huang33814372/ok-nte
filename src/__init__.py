@@ -1,6 +1,6 @@
 import os
 
-# Ensure System32 is in PATH for cffi/soundcard (and other native libraries)
+# Ensure System32 is in PATH for cffi and other native libraries
 # to find ole32.dll and other system DLLs in packaged environments.
 _sys32 = os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "System32")
 _path_value = os.environ.get("PATH", "")
@@ -9,6 +9,9 @@ _norm_sys32 = os.path.normcase(os.path.normpath(_sys32))
 _has_sys32 = any(os.path.normcase(os.path.normpath(p)) == _norm_sys32 for p in _path_entries)
 if os.path.isdir(_sys32) and not _has_sys32:
     os.environ["PATH"] = _path_value + (os.pathsep if _path_value else "") + _sys32
+
+GAME_EXE = "HTGame.exe"
+LAUNCHER_EXE = "NTEGame.exe"
 
 text_white_color = {
     "r": (244, 255),  # Red range
