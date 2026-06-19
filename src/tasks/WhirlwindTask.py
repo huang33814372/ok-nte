@@ -1,3 +1,4 @@
+
 from qfluentwidgets import FluentIcon
 
 from ok import TaskDisabledException
@@ -8,7 +9,7 @@ from src.tasks.NTEOneTimeTask import NTEOneTimeTask
 
 class WhirlwindTask(NTEOneTimeTask, BaseCombatTask):
     TARGET_NAVIGATION_ANGLE = -154.5
-    NAVIGATION_ANGLE_TOLERANCE = 10
+    NAVIGATION_ANGLE_TOLERANCE = 5
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -29,10 +30,11 @@ class WhirlwindTask(NTEOneTimeTask, BaseCombatTask):
         SoundCombatContext().update_task(self, dodge_action=self._dodge_with_skill)
         try:
             while True:
-                if not self.find_interac():
-                    self.navigate()
-                    self.sleep(0.1)
-                self.start_interac()
+                if not self.is_boss():
+                    if not self.find_interac():
+                        self.navigate()
+                        self.sleep(0.1)
+                    self.start_interac()
                 self.start_combat()
         finally:
             self._release_navigation_keys()
@@ -52,16 +54,16 @@ class WhirlwindTask(NTEOneTimeTask, BaseCombatTask):
         )
 
     def start_combat(self):
-        self.wait_in_team(settle_time=1)
-        self.send_key_down("w")
-        self.sleep(0.2)
-        self.send_key("lshift")
-        self.wait_until(self.is_boss)
-        self.sleep(1)
-        self.send_key_up("w")
+        if not self.is_boss():
+            self.wait_in_team(settle_time=1)
+            self.send_key_down("w")
+            self.sleep(0.2)
+            self.send_key("lshift")
+            self.wait_until(self.is_boss)
+            self.sleep(1)
+            self.send_key_up("w")
         with self.skip_sleep_checks() as skip:
             skip.check_combat = True
-            self.sleep(1)
             while self.is_boss():
                 self.click()
                 self.sleep(0.15)
@@ -87,7 +89,7 @@ class WhirlwindTask(NTEOneTimeTask, BaseCombatTask):
                 if abs(error) <= self.NAVIGATION_ANGLE_TOLERANCE:
                     return True
 
-                self._fine_tune_navigation(self._navigation_side_key(angle))
+                self._fine_tune_navigation(self._navigation_side_key(angle), abs(error))
         finally:
             self._release_navigation_keys()
 
@@ -95,15 +97,22 @@ class WhirlwindTask(NTEOneTimeTask, BaseCombatTask):
         error = self._normalize_angle(self.TARGET_NAVIGATION_ANGLE - current_angle)
         return "d" if error < 0 else "a"
 
-    def _fine_tune_navigation(self, side_key):
-        try:
-            self.send_key_down(side_key)
-            self.send_key("w")
-        finally:
-            self.send_key_up(side_key)
-        self.sleep(0.1)
+    def _fine_tune_navigation(self, side_key, angle_diff):
+        if angle_diff > 90:
+            self.send_key(side_key)
+            self.sleep(0.2)
+            return
+        else:
+
+            try:
+                self.send_key_down(side_key)
+                self.send_key("w")
+            finally:
+                self.send_key_up(side_key)
+            self.sleep(0.05)
+
         self.click(key="middle")
-        self.sleep(0.5)
+        self.sleep(0.2)
         self.send_key("w")
         self.sleep(0.5)
         self.next_frame()
