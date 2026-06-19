@@ -49,7 +49,7 @@ class WhirlwindTask(NTEOneTimeTask, BaseCombatTask):
         self.send_key_up("w")
         self.wait_until(
             lambda: not self.is_in_team(),
-            pre_action=lambda: self.send_interac(handle_claim=False),
+            pre_action=lambda: self.send_key("f", interval=0.25),
             time_out=20,
         )
         self.wait_until(
@@ -123,7 +123,6 @@ class WhirlwindTask(NTEOneTimeTask, BaseCombatTask):
         if angle_diff > 90:
             self.send_key(side_key)
             self.sleep(0.5)
-            return
         else:
             try:
                 self.send_key_down(side_key)
