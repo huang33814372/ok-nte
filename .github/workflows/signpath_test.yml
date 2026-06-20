@@ -1,0 +1,170 @@
+name: SignPath Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: Version string used by inline_ok_requirements during the test build.
+        required: true
+        default: v0.0.0-signpath-test
+      signing_policy:
+        description: SignPath signing policy slug.
+        required: true
+        default: test-signing
+        type: choice
+        options:
+          - test-signing
+          - release-signing
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  signpath-test:
+    name: Build and test-sign artifacts
+    runs-on: windows-latest
+
+    env:
+      PYTHONIOENCODING: 'UTF-8'
+
+    steps:
+      - name: Configure git
+        run: |
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+          git config --global user.email "110257560+BnanZ0@users.noreply.github.com"
+          git config --global user.name "RU"
+
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Set UTF-8 encoding
+        run: |
+          set PYTHONIOENCODING=utf-8
+          set PYTHONLEGACYWINDOWSSTDIO=utf-8
+          echo PYTHONIOENCODING=utf-8 >> $env:GITHUB_ENV
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: inline_ok_requirements
+        run: |
+          python -m ok.update.inline_ok_requirements --tag ${{ inputs.version_tag }}
+
+      - name: Run tests
+        env:
+          GITHUB_TOKEN: ''
+          GH_TOKEN: ''
+          CNB_GH: ''
+          OK_GH: ''
+          SIGNPATH_API_TOKEN: ''
+          MirrorChyanUploadToken: ''
+          ACTIONS_RUNTIME_TOKEN: ''
+          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ''
+        run: |
+          @(
+            'GITHUB_TOKEN',
+            'GH_TOKEN',
+            'CNB_GH',
+            'OK_GH',
+            'SIGNPATH_API_TOKEN',
+            'MirrorChyanUploadToken',
+            'ACTIONS_RUNTIME_TOKEN',
+            'ACTIONS_ID_TOKEN_REQUEST_TOKEN'
+          ) | ForEach-Object {
+            Remove-Item "Env:\$_" -ErrorAction SilentlyContinue
+          }
+
+          Get-ChildItem -Path ".\tests\*.py" | ForEach-Object {
+              Write-Host "Running tests in $($_.FullName)"
+              try {
+                  python -m unittest $_.FullName
+
+                  if ($LASTEXITCODE -ne 0) {
+                      throw "Tests failed in $($_.FullName)"
+                  }
+              } catch {
+                  Write-Error $_
+                  exit 1
+              }
+          }
+
+      - name: pyappify build-exe-only
+        id: build-exe-only
+        uses: ok-oldking/pyappify-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          build_exe_only: true
+
+      - name: Upload unsigned EXE artifact
+        id: upload-unsigned-artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signpath-test-unsigned-exe
+          path: ${{ steps.build-exe-only.outputs.exe-path }}
+          if-no-files-found: error
+
+      - name: Sign EXE
+        uses: signpath/github-action-submit-signing-request@v1.1
+        with:
+          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+          organization-id: '30cc9397-0ebf-4584-8030-12f4b872ecdc'
+          project-slug: 'ok-nte'
+          signing-policy-slug: ${{ inputs.signing_policy }}
+          artifact-configuration-slug: 'single-exe'
+          github-artifact-id: '${{ steps.upload-unsigned-artifact.outputs.artifact-id }}'
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 60000
+          output-artifact-directory: ${{ steps.build-exe-only.outputs.exe-folder }}
+
+      - name: Upload signed EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signpath-test-signed-exe
+          path: ${{ steps.build-exe-only.outputs.exe-path }}
+          if-no-files-found: error
+
+      - name: pyappify build-setup-exe
+        id: build-setup-exe
+        uses: ok-oldking/pyappify-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload unsigned setup EXE artifact
+        id: upload-unsigned-setup-artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signpath-test-unsigned-setup
+          path: pyappify_dist/*setup.exe
+          if-no-files-found: error
+
+      - name: Sign setup EXEs
+        uses: signpath/github-action-submit-signing-request@v1.1
+        with:
+          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+          organization-id: '30cc9397-0ebf-4584-8030-12f4b872ecdc'
+          project-slug: 'ok-nte'
+          signing-policy-slug: ${{ inputs.signing_policy }}
+          artifact-configuration-slug: 'setupexe'
+          github-artifact-id: '${{ steps.upload-unsigned-setup-artifact.outputs.artifact-id }}'
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 60000
+          output-artifact-directory: 'pyappify_dist'
+
+      - name: Upload signed setup EXE artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: signpath-test-signed-setup
+          path: pyappify_dist/*setup.exe
+          if-no-files-found: error
