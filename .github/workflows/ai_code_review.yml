@@ -10,7 +10,7 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: AI Code Review
         uses: ok-oldking/ai-codereviewer@c7e9358c36a241292c681de4d2b6755ee97ccdb6
