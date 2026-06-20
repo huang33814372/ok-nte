@@ -142,7 +142,9 @@ class AnomalyTask(NTEOneTimeTask, BaseCombatTask):
 
         # 共同操作 2
         self.log_info("正在传送至目标地点")
-        self.operate_click(0.9168, 0.2903)
+        btns = self.find_confirms(self.box_of_screen(0.925, 0.190, 0.982, 0.760))
+        btn = min(btns, key=lambda x: x.y)
+        self.operate_click(btn)
         self.click_traval_button()
         self.wait_in_team_and_world()
 

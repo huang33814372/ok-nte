@@ -300,6 +300,7 @@ class LauncherTask(BaseNTETask):
             self.log_info("Game process found; switching capture to game")
             try:
                 self._capture_game()
+                break
             except Exception as e:
                 if str(e) == "Cannot find window":
                     if i < _attempt:

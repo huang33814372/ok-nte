@@ -19,6 +19,7 @@ from src.scene.NTEScene import NTEScene
 from src.scene.ScreenPosition import ScreenPosition
 from src.tasks.mixin.CharUIMixin import CharUIMixin
 from src.utils import image_utils as iu
+from src.utils import vision_utils as vu
 
 logger = Logger.get_logger(__name__)
 stamina_re = re.compile(r"(\d+)/(\d+)")
@@ -285,7 +286,7 @@ class BaseNTETask(CharUIMixin, BaseTask):
 
     def get_current_char_index(self):
         return super().get_current_char_index()
-    
+
     def in_world(self) -> bool:
         res = self.check_mini_map_arrow()
         return len(res) == 1
@@ -296,11 +297,7 @@ class BaseNTETask(CharUIMixin, BaseTask):
         mat = self.box_of_screen(0.0691, 0.1083, 0.0949, 0.1493, name="in_world").crop_frame(frame)
         mat = iu.binarize_bgr_by_brightness(mat, threshold=200)
         res, _ = self._find_rotated_template(
-            template_bgr,
-            mat,
-            threshold=0.75,
-            cache_key=Labels.mini_map_arrow,
-            template_angle=15.5
+            template_bgr, mat, threshold=0.75, cache_key=Labels.mini_map_arrow, template_angle=15.5
         )
         # self.log_debug(f"in_world {res}, cost {cost} ms")
         return res
@@ -1089,12 +1086,23 @@ class BaseNTETask(CharUIMixin, BaseTask):
         )
         return bool(result)
 
-    def find_confirm(self, box=None, threshold=0.7):
+    def find_confirm(self, box=None, threshold=0.7) -> Box:
         if not isinstance(box, Box):
             box = self.main_viewport
         return self.find_best_match_in_box(
             box=box, to_find=[Labels.confirm_btn_1, Labels.confirm_btn_2], threshold=threshold
         )
+
+    def find_confirms(self, box=None, threshold=0.7) -> list[Box]:
+        if not isinstance(box, Box):
+            box = self.main_viewport
+        match_feature: list[list[Box]] = []
+        for feature_name in [Labels.confirm_btn_1, Labels.confirm_btn_2]:
+            features = self.find_feature(feature_name=feature_name, box=box, threshold=threshold)
+            if features:
+                match_feature.append(features)
+
+        return vu.suppress_boxes(match_feature)
 
     @staticmethod
     def get_app_locale() -> str | None:
@@ -1104,7 +1112,7 @@ class BaseNTETask(CharUIMixin, BaseTask):
             return og.app.locale.name()
         except Exception:
             return None
-        
+
     def open_f1_domain_page(self):
         self.openF1panel()
 
