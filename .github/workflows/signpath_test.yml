@@ -58,8 +58,10 @@ jobs:
           pip install -r requirements.txt
 
       - name: inline_ok_requirements
+        env:
+          VERSION_TAG: ${{ inputs.version_tag }}
         run: |
-          python -m ok.update.inline_ok_requirements --tag ${{ inputs.version_tag }}
+          python -m ok.update.inline_ok_requirements --tag $env:VERSION_TAG
 
       - name: Run tests
         env:
@@ -101,7 +103,7 @@ jobs:
 
       - name: pyappify build-exe-only
         id: build-exe-only
-        uses: ok-oldking/pyappify-action@master
+        uses: ok-oldking/pyappify-action@df9cbbd681e1ddccf5e44f59754866e00750bb8a
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -116,7 +118,7 @@ jobs:
           if-no-files-found: error
 
       - name: Sign EXE
-        uses: signpath/github-action-submit-signing-request@v1.1
+        uses: signpath/github-action-submit-signing-request@b9d91eadd323de506c0c81cf0c7fe7438f3360fd
         with:
           api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
           organization-id: '30cc9397-0ebf-4584-8030-12f4b872ecdc'
@@ -137,7 +139,7 @@ jobs:
 
       - name: pyappify build-setup-exe
         id: build-setup-exe
-        uses: ok-oldking/pyappify-action@master
+        uses: ok-oldking/pyappify-action@df9cbbd681e1ddccf5e44f59754866e00750bb8a
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -150,7 +152,7 @@ jobs:
           if-no-files-found: error
 
       - name: Sign setup EXEs
-        uses: signpath/github-action-submit-signing-request@v1.1
+        uses: signpath/github-action-submit-signing-request@b9d91eadd323de506c0c81cf0c7fe7438f3360fd
         with:
           api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
           organization-id: '30cc9397-0ebf-4584-8030-12f4b872ecdc'
