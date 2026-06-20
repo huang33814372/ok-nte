@@ -111,7 +111,7 @@ jobs:
 
       - name: Upload unsigned EXE artifact
         id: upload-unsigned-artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: signpath-test-unsigned-exe
           path: ${{ steps.build-exe-only.outputs.exe-path }}
@@ -131,7 +131,7 @@ jobs:
           output-artifact-directory: ${{ steps.build-exe-only.outputs.exe-folder }}
 
       - name: Upload signed EXE artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: signpath-test-signed-exe
           path: ${{ steps.build-exe-only.outputs.exe-path }}
@@ -145,7 +145,7 @@ jobs:
 
       - name: Upload unsigned setup EXE artifact
         id: upload-unsigned-setup-artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: signpath-test-unsigned-setup
           path: pyappify_dist/*setup.exe
@@ -165,7 +165,7 @@ jobs:
           output-artifact-directory: 'pyappify_dist'
 
       - name: Upload signed setup EXE artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: signpath-test-signed-setup
           path: pyappify_dist/*setup.exe
