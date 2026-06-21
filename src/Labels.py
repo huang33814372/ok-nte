@@ -2,6 +2,8 @@ from enum import Enum
 
 
 class Labels(str, Enum):
+    anomaly_fluff = 'anomaly_fluff'
+    anomaly_wooden_crate = 'anomaly_wooden_crate'
     auto_play = 'auto_play'
     boss_lv_text = 'boss_lv_text'
     box_all_esc_options = 'box_all_esc_options'
@@ -31,6 +33,8 @@ class Labels(str, Enum):
     f2_mission_panel = 'f2_mission_panel'
     f2_panel = 'f2_panel'
     f5_coffee_panel = 'f5_coffee_panel'
+    f5_house_lock = 'f5_house_lock'
+    f5_house_panel = 'f5_house_panel'
     f5_panel = 'f5_panel'
     fish_bait = 'fish_bait'
     fish_hold = 'fish_hold'

@@ -26,6 +26,8 @@ class DailyTask(NTEOneTimeTask, CinemaDateMixin, BaseNTETask):
     CONF_COFFEE_TASK = "一咖舍任务"
     CONF_AUTO_CYCLE_SUB_TASK = "自动循环项目"
     CONF_CINEMA_DATE = "影院约会"
+    CONF_FURNITURE = "异象家具"
+
     CINEMA_DATE_TARGET = "约会目标"
     DAILY_STAMINA_TARGET = "目标消耗体力"
 
@@ -51,6 +53,7 @@ class DailyTask(NTEOneTimeTask, CinemaDateMixin, BaseNTETask):
                 self.CONF_COFFEE_TASK: self.COFFEE_MODE_NONE,
                 self.CONF_CINEMA_DATE: False,
                 self.CINEMA_DATE_TARGET: "",
+                self.CONF_FURNITURE: False,
             }
         )
         self.config_description.update(
@@ -123,6 +126,11 @@ class DailyTask(NTEOneTimeTask, CinemaDateMixin, BaseNTETask):
                 self.CONF_CINEMA_DATE,
                 self._task_enabled(self.CONF_CINEMA_DATE, False),
                 lambda: self.run_cinema_date(self.config.get(self.CINEMA_DATE_TARGET, "")),
+            ),
+            (
+                self.CONF_FURNITURE,
+                self._task_enabled(self.CONF_FURNITURE, False),
+                self.claim_anomaly_furniture,
             ),
         ]
 
@@ -454,3 +462,149 @@ class DailyTask(NTEOneTimeTask, CinemaDateMixin, BaseNTETask):
     def run_coffee_task(self):
         task: CoffeeTask = self.get_task_by_class(CoffeeTask)
         return task.do_run()
+
+    def claim_anomaly_furniture(self):
+        """领取异象家具奖励"""
+
+        self.log_info("正在领取异象家具奖励")
+
+        def open_house_panel():
+            def action():
+                self.openF5panel()
+                self.sleep(1)
+                self.operate_click(0.255, 0.468)
+                self.sleep(0.5)
+                return self.wait_panel(Labels.f5_house_panel)
+
+            if self.find_one(Labels.f5_house_panel):
+                return True
+            result = self.retry_on_action(action, self.ensure_main)
+            if not result:
+                self.log_error("无法找到房产面板")
+                return False
+            self.sleep(1)
+            return True
+
+        def check_house_lock(ratio_y):
+            box = self.box_of_screen(0.050, ratio_y - 0.1, width=0.054, height=0.079, hcenter=True)
+            return self.find_one(Labels.f5_house_lock, box=box)
+
+        house_box = self.box_of_screen(0.507, 0.476, 0.956, 0.795, hcenter=True)
+
+        shown = 4
+        ratio_x = 0.079
+        ratio_y = 0.308
+        gap = 0.183
+        scroll = True
+        scroll_times = 0
+        scroll_per_item = 6
+        i = 0
+
+        for furniture in [Labels.anomaly_fluff, Labels.anomaly_wooden_crate]:
+            open_house_panel()
+
+            # 寻找目标家具
+            while scroll or i < shown:
+                if scroll:
+                    target_y = ratio_y
+                else:
+                    target_y = ratio_y + gap * i
+                    i += 1
+
+                # 检查房子是否解锁
+                if check_house_lock(target_y):
+                    self.sleep(0.25)
+                else:
+                    self.operate_click(ratio_x, target_y)
+                    self.sleep(0.25)
+                    if self.find_sift_feature(furniture, box=house_box):
+                        break
+
+                # 滚动并检查是否成功滚动
+                if scroll:
+                    scroll_times += 1
+                    snapshot_box = self.box_of_screen(0.016, 0.731, 0.143, 0.849, hcenter=True)
+                    snapshot = snapshot_box.crop_frame(self.frame)
+                    self.operate(
+                        lambda: (
+                            self.scroll_relative(ratio_x, ratio_y, -scroll_per_item),
+                            self.sleep(0.25),
+                        ),
+                        block=True,
+                    )
+                    y_offset = self.height * 0.1
+                    search_box = snapshot_box.copy(y_offset=-y_offset, height_offset=y_offset)
+                    scroll = not self.find_one(
+                        "snapshot", template=snapshot, box=search_box, threshold=0.9
+                    )
+            else:
+                self.log_info(f"not found furniture {furniture}")
+                self.operate(
+                    lambda: (
+                        self.scroll_relative(
+                            ratio_x, ratio_y, scroll_per_item * (scroll_times + 2)
+                        ),
+                        self.sleep(0.25),
+                    ),
+                    block=True,
+                )
+                continue
+
+            # 传送至目标房子
+            self.wait_until(
+                lambda: not self.find_one(Labels.f5_house_panel),
+                pre_action=lambda: self.operate_click(0.891, 0.951, after_sleep=1),
+            )
+            self.click_traval_button()
+            self.wait_in_team(time_out=120, settle_time=1)
+
+            # 打开异象家具
+            def action_1():
+                try:
+                    self.send_key_down("lalt")
+                    self.sleep(0.25)
+                    self.operate_click(0.465, 0.056)
+                finally:
+                    self.send_key_up("lalt")
+                self.sleep(2)
+                if not self.is_in_team():
+                    return True
+
+            self.retry_on_action(action_1, attempt=10, raise_if_failed=True)
+            box_left = self.box_of_screen(0.024, 0.181, 0.278, 0.775, hcenter=True)
+            self.wait_until(
+                lambda: self.find_sift_feature(furniture, box=box_left), raise_if_not_found=True
+            )
+            self.sleep(0.5)
+            box_right = self.box_of_screen(0.738, 0.236, 0.805, 0.959, hcenter=True)
+
+            # 点击异象家具
+            def action_2():
+                box = self.find_sift_feature(furniture, box=box_left)
+                if box:
+                    self.operate_click(box)
+                    self.sleep(0.5)
+                    self.operate_click(0.924, 0.174)
+                    self.sleep(0.5)
+                    if self.find_sift_feature(furniture, box=box_right):
+                        return True
+
+            self.retry_on_action(action_2, attempt=10, raise_if_failed=True)
+
+            # 二次确认异象家具
+            self.wait_until(
+                lambda: self.find_sift_feature(furniture, box=box_right), raise_if_not_found=True
+            )
+
+            # 领取目标家具
+            self.sleep(0.5)
+            self.operate(
+                lambda: (
+                    self.click(0.938, 0.283, move=True),
+                    self.sleep(0.1),
+                    self.click(0.938, 0.303, move=True),
+                ),
+                block=True,
+            )
+
+            self.ensure_main()

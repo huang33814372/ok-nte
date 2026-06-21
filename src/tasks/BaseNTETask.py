@@ -218,7 +218,7 @@ class BaseNTETask(CharUIMixin, MovementMixin, VisionMixin, BaseTask):
             return False
         return func(*args, **kwargs)
 
-    def operate(self, func: Callable, block=False, restore_cursor=True):
+    def operate(self, func: Callable, block=True, restore_cursor=True):
         from src.interaction.NTEInteraction import NTEInteraction
 
         if isinstance(self.executor.interaction, NTEInteraction):
@@ -757,7 +757,13 @@ class BaseNTETask(CharUIMixin, MovementMixin, VisionMixin, BaseTask):
         self.info_set("当前体力", current)
         return current
 
-    def retry_on_action(self, action: Callable, reset_action: Callable | None = None, attempt=3):
+    def retry_on_action(
+        self,
+        action: Callable,
+        reset_action: Callable | None = None,
+        attempt=3,
+        raise_if_failed=False,
+    ):
         result = None
         count = 0
 
@@ -775,6 +781,8 @@ class BaseNTETask(CharUIMixin, MovementMixin, VisionMixin, BaseTask):
                 result = action()
             if not result and reset_action is not None:
                 reset_action()
+        if raise_if_failed and not result:
+            raise WaitFailedException()
         return result
 
     def wait_click_confirm(

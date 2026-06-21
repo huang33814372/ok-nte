@@ -110,7 +110,7 @@
         },
         {
             "id": 20,
-            "file_name": "images/8.png",
+            "file_name": "images/9.png",
             "width": 1920,
             "height": 1080
         },
@@ -176,9 +176,21 @@
         },
         {
             "id": 31,
-            "file_name": "images/9.png",
+            "file_name": "images/10.png",
             "width": 1600,
             "height": 900
+        },
+        {
+            "id": 32,
+            "file_name": "images/8.png",
+            "width": 2560,
+            "height": 1440
+        },
+        {
+            "id": 33,
+            "file_name": "images/0.png",
+            "width": 2560,
+            "height": 1440
         }
     ],
     "annotations": [
@@ -1000,6 +1012,58 @@
             ],
             "area": 930,
             "iscrowd": 0
+        },
+        {
+            "id": 64,
+            "image_id": 32,
+            "category_id": 67,
+            "bbox": [
+                1555,
+                737,
+                166,
+                104
+            ],
+            "area": 17264,
+            "iscrowd": 0
+        },
+        {
+            "id": 65,
+            "image_id": 32,
+            "category_id": 65,
+            "bbox": [
+                36,
+                45,
+                84,
+                77
+            ],
+            "area": 6468,
+            "iscrowd": 0
+        },
+        {
+            "id": 66,
+            "image_id": 32,
+            "category_id": 66,
+            "bbox": [
+                178,
+                580,
+                52,
+                62
+            ],
+            "area": 3224,
+            "iscrowd": 0
+        },
+        {
+            "id": 67,
+            "image_id": 33,
+            "category_id": 64,
+            "bbox": [
+                1322,
+                734,
+                165,
+                117
+            ],
+            "area": 19305,
+            "iscrowd": 0
         }
     ],
     "categories": [
@@ -1316,6 +1380,26 @@
         {
             "id": 63,
             "name": "launcher_popup_close",
+            "supercategory": ""
+        },
+        {
+            "id": 64,
+            "name": "anomaly_wooden_crate",
+            "supercategory": ""
+        },
+        {
+            "id": 65,
+            "name": "f5_house_panel",
+            "supercategory": ""
+        },
+        {
+            "id": 66,
+            "name": "f5_house_lock",
+            "supercategory": ""
+        },
+        {
+            "id": 67,
+            "name": "anomaly_fluff",
             "supercategory": ""
         }
     ]
