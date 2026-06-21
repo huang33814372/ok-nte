@@ -296,10 +296,11 @@ class BaseNTETask(CharUIMixin, BaseTask):
         template_bgr = self.get_feature_by_name(Labels.mini_map_arrow).mat
         mat = self.box_of_screen(0.0691, 0.1083, 0.0949, 0.1493, name="in_world").crop_frame(frame)
         mat = iu.binarize_bgr_by_brightness(mat, threshold=200)
+        # now = time.time()
         res, _ = self._find_rotated_template(
             template_bgr, mat, threshold=0.75, cache_key=Labels.mini_map_arrow, template_angle=15.5
         )
-        # self.log_debug(f"in_world {res}, cost {cost} ms")
+        # self.log_debug(f"in_world {res}, cost {time.time() - now} ms")
         return res
 
     def _find_rotated_template(
@@ -307,7 +308,7 @@ class BaseNTETask(CharUIMixin, BaseTask):
         template,
         scene,
         threshold=0.75,
-        angle_range=range(-180, 180, 5),
+        angle_range=range(-180, 180, 2),
         min_non_zero=20,
         cache_key=None,
         template_angle=0,
@@ -821,43 +822,6 @@ class BaseNTETask(CharUIMixin, BaseTask):
             if self.in_team_and_world():
                 return True
             self.handle_monthly_card()
-            # texts = self.ocr(log=self.debug)
-            # if login := self.find_boxes(
-            #     texts, boundary=self.box_of_screen(0.3, 0.3, 0.7, 0.7), match="登录"
-            # ):
-            #     if not self.find_boxes(
-            #         texts, boundary=self.box_of_screen(0.3, 0.3, 0.7, 0.7), match="+86"
-            #     ):
-            #         self.click(login, after_sleep=1)
-            #         self.log_info("点击登录按钮!")
-            #     return False
-            # if agree := self.find_boxes(
-            #     texts, boundary=self.box_of_screen(0.3, 0.3, 0.7, 0.7), match="同意"
-            # ):
-            #     self.log_debug(f"found agree {agree}")
-            #     if self.find_boxes(
-            #         texts, boundary=self.box_of_screen(0.3, 0.3, 0.7, 0.7),
-            #         match=re.compile(r"\d{11}"),
-            #     ):
-            #         self.click(agree, after_sleep=1)
-            #         self.log_info("点击同意按钮!")
-            #     return False
-            # if self.find_boxes(texts, match=re.compile("游戏即将重启")):
-            #     self.log_info("游戏更新成功, 游戏即将重启")
-            #     self.click(self.find_boxes(texts, match="确认"), after_sleep=60)
-            #     result = self.start_device()
-            #     self.log_info(f"start_device end {result}")
-            #     self.sleep(30)
-            #     return False
-
-            # if start := self.find_boxes(
-            #     texts, boundary="bottom_right", match=["开始游戏", re.compile("进入游戏")]
-            # ):
-            #     if not self.find_boxes(texts, boundary="bottom_right", match="登录"):
-            #         self.click(start)
-            #         self.log_info(f"点击开始游戏! {start}")
-            #         return False
-
             if self.find_one(Labels.login_setting):
                 self.log_info("found login_setting, bring_to_front and click")
                 if not self.is_foreground():
