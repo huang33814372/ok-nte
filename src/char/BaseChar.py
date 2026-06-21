@@ -629,10 +629,9 @@ class BaseChar:
         if self.ultimate_available():
             if self.task.combat_detect_uncertain:
                 self.logger.info("click_ultimate blocked by combat_detect_uncertain")
-            while self.task.combat_detect_uncertain:
-                self.click_with_interval()
-                self.sleep(0.1)
-            else:
+                while self.task.combat_detect_uncertain:
+                    self.click_with_interval()
+                    self.sleep(0.1)
                 self.logger.info("click_ultimate unblocked")
         else:
             self._wait_for_ultimate_ready(wait_if_no_cd)

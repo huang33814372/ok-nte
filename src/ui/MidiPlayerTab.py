@@ -97,6 +97,7 @@ class MidiPlayerTab(CustomTab):
         super().__init__()
         self.icon = FluentIcon.MUSIC
         self.tr_name_tab = og.app.tr("自动弹琴")
+        self.tr_no_song_selected = og.app.tr("未选择歌曲")
         self.is_playing = False
         self.is_favorite = False
         self.current_key_mode = "36_keys"
@@ -250,7 +251,7 @@ class MidiPlayerTab(CustomTab):
 
         # Track Info & Favorite
         hbox_top = QHBoxLayout()
-        self.lbl_track_name = MarqueeSubtitleLabel(og.app.tr("未选择歌曲"))
+        self.lbl_track_name = MarqueeSubtitleLabel(self.tr_no_song_selected)
         self.lbl_track_name.installEventFilter(ToolTipFilter(self.lbl_track_name, showDelay=300))
 
         self.btn_favorite = TransparentToolButton(FluentIcon.HEART)
@@ -316,7 +317,7 @@ class MidiPlayerTab(CustomTab):
         self.btn_play_selected.clicked.connect(self.on_play_selected_clicked)
         self.btn_play_selected.hide()
 
-        self.lbl_selected_song = MarqueeBodyLabel(og.app.tr("未选择歌曲"))
+        self.lbl_selected_song = MarqueeBodyLabel(self.tr_no_song_selected)
         self.lbl_selected_song.installEventFilter(
             ToolTipFilter(self.lbl_selected_song, showDelay=300)
         )
@@ -1265,9 +1266,9 @@ class MidiPlayerTab(CustomTab):
             self._request_analysis_for_current_song()
         else:
             self.selected_song_id = None
-            self.lbl_selected_song.setText(og.app.tr("未选择歌曲"))
+            self.lbl_selected_song.setText(self.tr_no_song_selected)
             if self.playing_song_id is None:
-                self.lbl_track_name.setText(og.app.tr("未选择歌曲"))
+                self.lbl_track_name.setText(self.tr_no_song_selected)
             self.btn_favorite.hide()
             self.btn_play_selected.hide()
             # Clear chart data if no song is selected

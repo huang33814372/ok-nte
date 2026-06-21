@@ -1,6 +1,6 @@
-from ok import Logger, TriggerTask
 from qfluentwidgets import FluentIcon
 
+from ok import Logger, TriggerTask
 from src.tasks.BaseNTETask import BaseNTETask
 
 logger = Logger.get_logger(__name__)
@@ -18,9 +18,8 @@ class AutoLoginTask(BaseNTETask, TriggerTask):
 
     def run(self):
         if self.scene.logged_in():
-            pass
+            return
         elif self.scene.is_in_team(self.is_in_team):
             self.scene.set_logged_in()
         else:
             self.wait_login()
-        return
