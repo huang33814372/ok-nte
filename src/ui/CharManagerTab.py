@@ -456,7 +456,7 @@ class CharManagerTab(CustomTab):
         self.combo_select.blockSignals(True)
         self.combo_select.clear()
         for label, combo_ref in self.manager.get_all_combo_items():
-            self.combo_select.addItem(label, user_data=combo_ref)
+            self.combo_select.addItem(label, userData=combo_ref)
         self.combo_select.setCurrentIndex(-1)
         self.combo_select.blockSignals(False)
 

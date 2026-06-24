@@ -84,9 +84,9 @@ class NewCharDialog(MessageBoxBase):
 
         self.combo_list = SearchableComboBox()
         self.combo_list.setPlaceholderText(self.tr_list_ph)
-        self.combo_list.addItem("", user_data="")
+        self.combo_list.addItem("", userData="")
         for label, combo_ref in self.manager.get_all_combo_items():
-            self.combo_list.addItem(label, user_data=combo_ref)
+            self.combo_list.addItem(label, userData=combo_ref)
         self.viewLayout.addWidget(self.combo_list)
 
         self.widget.setMinimumWidth(320)
@@ -309,9 +309,9 @@ class FixedTeamSlotCard(CardWidget):
 
         self.combo_list.blockSignals(True)
         self.combo_list.clear()
-        self.combo_list.addItem("", user_data="")
+        self.combo_list.addItem("", userData="")
         for label, combo_ref in self.manager.get_all_combo_items():
-            self.combo_list.addItem(label, user_data=combo_ref)
+            self.combo_list.addItem(label, userData=combo_ref)
         self._set_combo_by_ref(current_combo_ref)
         self.combo_list.blockSignals(False)
 
