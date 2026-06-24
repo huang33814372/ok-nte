@@ -44,6 +44,7 @@ class WhirlwindTask(NTEOneTimeTask, BaseCombatTask):
             SoundCombatContext().clear_task_if(self)
 
     def do_run(self):
+        self.sleep_check_skip.all = True
         self._apply_sound_config(dodge_action=self._dodge_with_skill)
         cond1 = not self.is_boss()
         cond2 = not self.find_interac()
@@ -58,6 +59,7 @@ class WhirlwindTask(NTEOneTimeTask, BaseCombatTask):
                 cond1 = True
                 cond2 = True
         finally:
+            self.sleep_check_skip.all = False
             self._release_navigation_keys()
 
     def sleep_check(self):
@@ -73,6 +75,7 @@ class WhirlwindTask(NTEOneTimeTask, BaseCombatTask):
             self.find_dialog_history,
             pre_action=self.scroll_and_interac,
             time_out=30,
+            raise_if_not_found=True,
         )
 
         diff_option = self.config.get(self.CONFIG_DIFF_OPTION, 1)
