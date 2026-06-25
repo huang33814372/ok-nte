@@ -1,5 +1,4 @@
-﻿import ctypes
-import inspect
+﻿import inspect
 import re
 import threading
 import time
@@ -7,10 +6,6 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from typing import Any, Callable, List
 
-import win32api
-import win32con
-import win32gui
-import win32process
 from ok import BaseTask, Box, CannotFindException, Logger, WaitFailedException, og, safe_get
 
 from src.Labels import Labels
@@ -18,6 +13,7 @@ from src.scene.NTEScene import NTEScene
 from src.scene.ScreenPosition import ScreenPosition
 from src.tasks.mixin.CharUIMixin import CharUIMixin
 from src.tasks.mixin.MovementMixin import MovementMixin
+from src.tasks.mixin.OgMixin import OgMixin
 from src.tasks.mixin.VisionMixin import VisionMixin
 from src.utils import image_utils as iu
 from src.utils import vision_utils as vu
@@ -26,7 +22,7 @@ logger = Logger.get_logger(__name__)
 stamina_re = re.compile(r"(\d+)/(\d+)")
 
 
-class BaseNTETask(CharUIMixin, MovementMixin, VisionMixin, BaseTask):
+class BaseNTETask(CharUIMixin, MovementMixin, VisionMixin, OgMixin, BaseTask):
     DEFAULT_MOVE = False
 
     def __init__(self, *args, **kwargs):
@@ -47,20 +43,6 @@ class BaseNTETask(CharUIMixin, MovementMixin, VisionMixin, BaseTask):
         if hasattr(target_config, "save_file"):
             target_config.save_file()
         self._refresh_config_ui(target_config)
-
-    def _refresh_config_ui(self, config):
-        """刷新指定配置对应的 UI 界面"""
-        if not (hasattr(og, "app") and og.app.main_window):
-            return
-
-        vBoxLayout = og.app.main_window.onetime_tab.vBoxLayout
-        for i in range(vBoxLayout.count()):
-            widget = vBoxLayout.itemAt(i).widget()
-            if widget and hasattr(widget, "config"):
-                # 如果 widget 绑定的 config 对象是一致的，则刷新
-                if widget.config is config:
-                    widget.update_config()
-                    break
 
     @property
     def thread_pool_executor(self) -> ThreadPoolExecutor | None:
@@ -362,81 +344,6 @@ class BaseNTETask(CharUIMixin, MovementMixin, VisionMixin, BaseTask):
             return
         og.device_manager.set_interaction(m)
         self.log_info(f"已切换交互式方式: {get_name(m)}")
-
-    def is_foreground(self):
-        """
-        检查窗口是否在最前端。
-        """
-        if not self.hwnd:
-            return False
-        return self.hwnd.is_foreground()
-
-    def bring_to_front(self, after_sleep=0):
-        """
-        强制将窗口带到最前端。
-        """
-        if not self.hwnd:
-            self.log_warning("bring_to_front skipped: hwnd_window unavailable")
-            return False
-        hwnd = self.hwnd.hwnd
-
-        if self.is_foreground():
-            self.log_info(f"bring_to_front {hwnd} already is foreground")
-            return True
-
-        self.log_info(f"try bring_to_front {hwnd}")
-
-        current_thread_id = 0
-        target_thread_id = 0
-        foreground_thread_id = 0
-        attached_target = False
-        attached_foreground = False
-
-        try:
-            current_thread_id = win32api.GetCurrentThreadId()
-            target_thread_id, _ = win32process.GetWindowThreadProcessId(hwnd)
-            foreground_hwnd = win32gui.GetForegroundWindow()
-            if foreground_hwnd:
-                foreground_thread_id, _ = win32process.GetWindowThreadProcessId(foreground_hwnd)
-
-            if target_thread_id and target_thread_id != current_thread_id:
-                attached_target = bool(
-                    ctypes.windll.user32.AttachThreadInput(
-                        current_thread_id, target_thread_id, True
-                    )
-                )
-            if (
-                foreground_thread_id
-                and foreground_thread_id != current_thread_id
-                and foreground_thread_id != target_thread_id
-            ):
-                attached_foreground = bool(
-                    ctypes.windll.user32.AttachThreadInput(
-                        current_thread_id, foreground_thread_id, True
-                    )
-                )
-
-            if win32gui.IsIconic(hwnd):
-                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-            win32gui.BringWindowToTop(hwnd)
-            win32gui.SetForegroundWindow(hwnd)
-            self.sleep(0.1)
-            if self.is_foreground():
-                self.log_info(f"bring_to_front {hwnd} succeeded")
-                self.sleep(after_sleep)
-                return True
-            self.log_info(f"bring_to_front {hwnd} did not keep foreground")
-            return False
-        except Exception as e:
-            logger.debug(f"bring_to_front failed: {e}")
-            return False
-        finally:
-            if attached_foreground:
-                ctypes.windll.user32.AttachThreadInput(
-                    current_thread_id, foreground_thread_id, False
-                )
-            if attached_target:
-                ctypes.windll.user32.AttachThreadInput(current_thread_id, target_thread_id, False)
 
     @property
     def interac_box(self):
