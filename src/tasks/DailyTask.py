@@ -294,11 +294,14 @@ class DailyTask(NTEOneTimeTask, CinemaDateMixin, BaseNTETask):
         old_working_task = self.working_task
         old_sleep_check_interval = self.sleep_check_interval
         working_task = cast(WorkingTaskT, self.get_task_by_class(cls))
+        old_task_info = working_task.info
         self.working_task = working_task
+        self.working_task.info = self.info
         self.sleep_check_interval = working_task.sleep_check_interval
         try:
             yield working_task
         finally:
+            self.working_task.info = old_task_info
             self.working_task = old_working_task
             self.sleep_check_interval = old_sleep_check_interval
     
