@@ -215,14 +215,14 @@ class SoundCombatContext:
                 or self._trigger.task.executor.paused
             ):
                 return
-            if can_sound_trigger := getattr(self._trigger.task, "can_sound_trigger", None):
-                if not can_sound_trigger():
-                    return
+            if not self._can_sound_trigger(self._trigger.task):
+                return
             if self.should_interrupt_combat():
                 return
             if self._pending_action is not None:
                 return
             self._pending_action = action
+            task = self._trigger.task
 
         def discard_pending_action():
             with self._context_lock:
@@ -233,6 +233,18 @@ class SoundCombatContext:
                 return True
 
         self.enter_priority(on_timeout=discard_pending_action)
+        if getattr(task, "async_sound_action", False):
+            self._execute_pending_action_async(action, task)
+
+    def _execute_pending_action_async(self, action, task):
+        def execute():
+            self.execute_pending_action(expected_action=action, expected_task=task)
+
+        threading.Thread(
+            target=execute,
+            daemon=True,
+            name="SoundPendingActionExecutor",
+        ).start()
 
     def _on_dodge_triggered(self):
         self._queue_action("dodge")
@@ -240,18 +252,26 @@ class SoundCombatContext:
     def _on_counter_triggered(self):
         self._queue_action("dodge" if self._dodge_all_attacks else "counter")
 
-    def execute_pending_action(self):
+    def execute_pending_action(self, expected_action=_ACTION_UNSET, expected_task=_ACTION_UNSET):
         with self._context_lock:
             action = self._pending_action
-            self._pending_action = None
+            if expected_action is not _ACTION_UNSET and action != expected_action:
+                return
             trigger = self._trigger
+            task = trigger.task if trigger else None
+            if expected_task is not _ACTION_UNSET and task is not expected_task:
+                return
+            self._pending_action = None
 
         if (
             action is None
             or trigger is None
-            or trigger.task is None
-            or trigger.task.executor.paused
+            or task is None
+            or task.executor.paused
         ):
+            self.exit_priority()
+            return
+        if not self._can_sound_trigger(task):
             self.exit_priority()
             return
 
@@ -277,6 +297,8 @@ class SoundCombatContext:
             self._pending_task = task
 
             if task_changed:
+                self._pending_action = None
+                self.clear_priority()
                 self._dodge_action = None if dodge_action is _ACTION_UNSET else dodge_action
                 self._counter_action = None if counter_action is _ACTION_UNSET else counter_action
             else:
@@ -341,10 +363,14 @@ class SoundCombatContext:
         task = trigger.task
         if not task:
             return False
-        if can_sound_trigger := getattr(task, "can_sound_trigger", None):
-            if not can_sound_trigger():
-                return False
+        if not self._can_sound_trigger(task):
+            return False
         return not task.executor.paused
+
+    @staticmethod
+    def _can_sound_trigger(task) -> bool:
+        can_trigger = getattr(task, "can_sound_trigger", None)
+        return can_trigger is None or can_trigger()
 
     @property
     def is_active(self) -> bool:
