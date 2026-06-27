@@ -137,7 +137,10 @@ class WhirlwindTask(NTEOneTimeTask, BaseCombatTask):
                 self.sleep(0.15)
                 self.send_key(self.get_ultimate_key())
                 self.sleep(0.15)
-                if not self.is_boss() and self.is_in_team():
+                if not self.is_in_team():
+                    if self.should_check_monthly_card():
+                        self.operate_click(0.50, 0.89, interval=2)
+                elif not self.is_boss():
                     break
         self.sleep(2)
         self.wait_in_team(time_out=60, settle_time=1)
