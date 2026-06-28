@@ -1,3 +1,4 @@
+import ctypes
 import os
 import re
 import time
@@ -29,6 +30,10 @@ def _exe_name_list(exe_names):
 def _format_exe_names(exe_names):
     names = _exe_name_list(exe_names)
     return ", ".join(names) if names else "<empty>"
+
+
+SPI_GETSCREENSAVERRUNNING = 0x0072
+DESKTOP_SWITCHDESKTOP = 0x0100
 
 
 class DynamicConfig(dict):
@@ -76,6 +81,7 @@ class LauncherTask(BaseNTETask):
 
     def run(self):
         self.log_info("Launcher task started")
+        self._dismiss_screensaver()
         if not self._check_admin():
             return
 
@@ -126,6 +132,64 @@ class LauncherTask(BaseNTETask):
         if not self._click_start_game():
             raise TaskDisabledException("Timed out waiting for launcher to minimize")
         self._wait_for_game_and_capture()
+
+    def _is_screensaver_running(self):
+        is_running = ctypes.c_bool(False)
+        if not ctypes.windll.user32.SystemParametersInfoW(
+            SPI_GETSCREENSAVERRUNNING, 0, ctypes.byref(is_running), 0
+        ):
+            self.log_warning("Could not query screensaver state")
+            return False
+        return is_running.value
+
+    def _dismiss_screensaver(self):
+        user32 = ctypes.windll.user32
+        kernel32 = ctypes.windll.kernel32
+        h_desk_old = None
+        h_desk_new = None
+        switched_desktop = False
+        try:
+            if not self._is_screensaver_running():
+                return
+
+            current_thread_id = kernel32.GetCurrentThreadId()
+            h_desk_old = user32.GetThreadDesktop(current_thread_id)
+            if not h_desk_old:
+                self.log_warning("Could not get current thread desktop")
+                return
+
+            h_desk_new = user32.OpenInputDesktop(0, False, DESKTOP_SWITCHDESKTOP)
+            if not h_desk_new:
+                self.log_warning("Could not open input desktop")
+                return
+
+            if not user32.SetThreadDesktop(h_desk_new):
+                self.log_warning("Could not switch to input desktop")
+                return
+            switched_desktop = True
+            self.log_info("Successfully switched thread to input desktop")
+
+            from pynput.mouse import Controller
+
+            mouse = Controller()
+            mouse.move(50, 0)
+            self.log_info("Moved mouse to dismiss screensaver")
+            time.sleep(1)
+            if self._is_screensaver_running():
+                self.log_warning("Screensaver is still running after mouse move")
+                return
+
+            self.log_info("Dismissed screensaver with mouse move")
+        except Exception as e:
+            self.log_warning(f"Failed to dismiss screensaver: {e}")
+        finally:
+            if switched_desktop and h_desk_old:
+                if user32.SetThreadDesktop(h_desk_old):
+                    self.log_info("Successfully switched thread to original desktop")
+                else:
+                    self.log_warning("Could not switch back to original desktop")
+            if h_desk_new:
+                user32.CloseDesktop(h_desk_new)
 
     def _capture_game(self):
         self.log_info(
