@@ -19,6 +19,7 @@ RECORD_CLICK_OVERLAY_KEY = "nte_record_click_overlay"
 DEFAULT_RECORD_INSTRUCTION = "Record operations"
 RECORD_CONFIG_FOLDER = "configs/records"
 RECORD_OPERATIONS_KEY = "operations"
+SAVED_OPERATION_KEYS = ("type", "x", "y", "delay", "count", "button", "down_time")
 SCROLL_MERGE_INTERVAL = 0.35
 NOTIFICATION = (
     "No recorded operations were found. Please wait for the recording prompt, "
@@ -100,7 +101,12 @@ class RecordTask(BaseNTETask):
         return [operation for operation in operations if isinstance(operation, dict)]
 
     def save_recorded_operations(self, operations: list[dict[str, Any]]) -> None:
-        self.record_config[RECORD_OPERATIONS_KEY] = operations
+        self.record_config[RECORD_OPERATIONS_KEY] = [
+            self._saved_operation_record(operation) for operation in operations
+        ]
+
+    def _saved_operation_record(self, operation: dict[str, Any]) -> dict[str, Any]:
+        return {key: operation[key] for key in SAVED_OPERATION_KEYS if key in operation}
 
     def has_recorded_operations(self) -> bool:
         return bool(self.load_recorded_operations())
@@ -163,7 +169,7 @@ class RecordTask(BaseNTETask):
 
             op_type = operation.get("type")
             if op_type == "click":
-                self.operation_click(
+                self.operate_click(
                     operation["x"],
                     operation["y"],
                     key=operation.get("button", "left"),
@@ -183,9 +189,6 @@ class RecordTask(BaseNTETask):
                     block=True,
                 )
             previous_operation = operation
-
-    def operation_click(self, *args, **kwargs):
-        return self.operate_click(*args, **kwargs)
 
     def _operation_delay(
         self,
@@ -298,7 +301,6 @@ class RecordTask(BaseNTETask):
             if click is None:
                 return
             click["end_time"] = now
-            click["duration"] = click["down_time"]
 
             with records_lock:
                 flush_pending_scroll(force=True)
@@ -337,12 +339,10 @@ class RecordTask(BaseNTETask):
                     operation["x"] = scroll["x"]
                     operation["y"] = scroll["y"]
                     operation["end_time"] = now
-                    operation["duration"] = round(now - operation["time"], 4)
                     pending_scroll["last_time"] = now
                     return
                 scroll["count"] = count_delta
                 scroll["end_time"] = now
-                scroll["duration"] = 0.0
                 pending_scroll["operation"] = scroll
                 pending_scroll["last_time"] = now
 
@@ -413,12 +413,6 @@ class RecordTask(BaseNTETask):
             "button": button,
             "x": normalized_x,
             "y": normalized_y,
-            "pixel_x": int(round(pixel_x)),
-            "pixel_y": int(round(pixel_y)),
-            "screen_x": int(round(screen_x)),
-            "screen_y": int(round(screen_y)),
-            "width": int(round(width)),
-            "height": int(round(height)),
             "down_time": round(max(0.0, down_time), 4),
             "time": time.time() if event_time is None else event_time,
         }
