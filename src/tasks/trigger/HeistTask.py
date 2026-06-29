@@ -21,8 +21,7 @@ class HeistTask(BaseNTETask, TriggerTask):
     PICK_KEY_HOLD_INTERVAL = 0.35
     QUICK_RUN_HOLD_INTERVAL = 0.5
     QUICK_RUN_KEY_AFTER_SLEEP = 0.25
-    QUICK_RUN_SHIFT_INTERVAL = 0.3
-    QUICK_RUN_SHIFT_AFTER_SLEEP = 0.4
+    QUICK_RUN_SHIFT_INTERVAL = 0.2
     LISTENER_KEY_LOG_INTERVAL = 2
     PICK_STATE_LOG_INTERVAL = 2
     QUICK_RUN_STATE_LOG_INTERVAL = 2
@@ -253,6 +252,8 @@ class HeistTask(BaseNTETask, TriggerTask):
                     deadline += 0.1
                     if self.is_health_changed(frame):
                         break
+                    if self.is_char_at_index(index=int(key) - 1, frame=frame):
+                        break
 
                 if time.time() >= next_send:
                     self._tap_key(key)
@@ -263,14 +264,15 @@ class HeistTask(BaseNTETask, TriggerTask):
                 time.sleep(0.05)
             self._quick_run_step = 1
             self._quick_run_time = time.time()
-        elif self._quick_run_step == 1:
-            self._tap_key("lshift")
-            self._quick_run_step = 2
-            self._quick_run_time = time.time() + self.QUICK_RUN_SHIFT_INTERVAL
         else:
-            self._tap_key("lshift")
-            self._quick_run_step = 0
-            self._quick_run_time = time.time() + self.QUICK_RUN_SHIFT_AFTER_SLEEP
+            elapsed = time.time() - self._quick_run_time
+            if elapsed >= 0.7:
+                self._quick_run_step = 0
+                self._quick_run_time = time.time()
+                return
+            if elapsed >= (self._quick_run_step - 1) * self.QUICK_RUN_SHIFT_INTERVAL:
+                self._tap_key("lshift")
+                self._quick_run_step += 1
 
     def _reset_quick_run(self):
         self._shift_pressed = False
