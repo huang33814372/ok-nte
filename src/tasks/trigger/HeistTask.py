@@ -23,6 +23,9 @@ class HeistTask(BaseNTETask, TriggerTask):
     QUICK_RUN_KEY_AFTER_SLEEP = 0.25
     QUICK_RUN_SHIFT_INTERVAL = 0.3
     QUICK_RUN_SHIFT_AFTER_SLEEP = 0.4
+    LISTENER_KEY_LOG_INTERVAL = 2
+    PICK_STATE_LOG_INTERVAL = 2
+    QUICK_RUN_STATE_LOG_INTERVAL = 2
     KEY_MAP = {
         "shift": (win32con.VK_SHIFT, win32con.VK_LSHIFT, win32con.VK_RSHIFT),
         "lshift": (win32con.VK_LSHIFT,),
@@ -76,6 +79,7 @@ class HeistTask(BaseNTETask, TriggerTask):
         self.listener = None
         self.physical_keys_pressed = set()
         self.suppressed_keys = set()
+        self._diagnostic_log_times = {}
 
     def run(self):
         self.start_listener()
@@ -128,11 +132,28 @@ class HeistTask(BaseNTETask, TriggerTask):
         key_pressed = self._is_key_pressed(key)
         now = time.time()
         if not key_pressed:
+            if self._is_key_down_by_async_state(key):
+                self._log_diagnostic(
+                    "pick_listener_missed",
+                    (
+                        f"heist pick key is down by async state but missing from listener state: "
+                        f"key={key}, vk_codes={self._get_vk_codes(key)}, "
+                        f"physical_keys={sorted(self.physical_keys_pressed)}, "
+                        f"listener_running={self._is_listener_running()}"
+                    ),
+                    self.PICK_STATE_LOG_INTERVAL,
+                    level="warning",
+                )
             self._reset_pick_key()
             return
 
         if self._pick_key_down_time == 0:
             self._pick_key_down_time = now
+            self._log_diagnostic(
+                "pick_key_hold_started",
+                f"heist pick key hold detected: key={key}",
+                self.PICK_STATE_LOG_INTERVAL,
+            )
             return
         if now - self._pick_key_down_time < self.PICK_KEY_HOLD_INTERVAL:
             return
@@ -141,6 +162,11 @@ class HeistTask(BaseNTETask, TriggerTask):
             self._scroll_count = 0
             self._pick_key_pressed = True
             self._release_key(key)
+            self._log_diagnostic(
+                "quick_pick_started",
+                f"heist quick pick started: key={key}",
+                self.PICK_STATE_LOG_INTERVAL,
+            )
 
         if now < self._next_pick_time:
             return
@@ -164,10 +190,27 @@ class HeistTask(BaseNTETask, TriggerTask):
         shift_pressed = self._is_key_pressed("shift")
         now = time.time()
         if not shift_pressed:
+            if self._is_key_down_by_async_state("shift"):
+                self._log_diagnostic(
+                    "quick_run_listener_missed",
+                    (
+                        f"heist quick run key is down by async state but missing from listener state: "
+                        f"key=shift, vk_codes={self._get_vk_codes('shift')}, "
+                        f"physical_keys={sorted(self.physical_keys_pressed)}, "
+                        f"listener_running={self._is_listener_running()}"
+                    ),
+                    self.QUICK_RUN_STATE_LOG_INTERVAL,
+                    level="warning",
+                )
             self._reset_quick_run()
             return
         if not self._shift_pressed:
             self._shift_down_time = now
+            self._log_diagnostic(
+                "quick_run_key_hold_started",
+                "heist quick run key hold detected: key=shift",
+                self.QUICK_RUN_STATE_LOG_INTERVAL,
+            )
 
         self._shift_pressed = shift_pressed
 
@@ -178,6 +221,11 @@ class HeistTask(BaseNTETask, TriggerTask):
                 self._quick_run_time = 0
                 self._quick_run_step = 0
                 self._release_shift_keys()
+                self._log_diagnostic(
+                    "quick_run_started",
+                    "heist quick run started: key=shift",
+                    self.QUICK_RUN_STATE_LOG_INTERVAL,
+                )
             else:
                 return
 
@@ -303,11 +351,24 @@ class HeistTask(BaseNTETask, TriggerTask):
             )
             self.physical_keys_pressed = set()
             self.suppressed_keys = set()
+            self._log_diagnostic(
+                "listener_starting",
+                "heist keyboard listener starting",
+                interval=10,
+            )
             self.listener.start()
             self.listener.wait()
             if self._check_listener_error():
                 self.stop_listener()
                 return
+            self._log_diagnostic(
+                "listener_started",
+                (
+                    f"heist keyboard listener started: "
+                    f"running={self.listener.running}, alive={self.listener.is_alive()}"
+                ),
+                interval=10,
+            )
 
     def stop_listener(self):
         if self.listener is not None:
@@ -320,6 +381,8 @@ class HeistTask(BaseNTETask, TriggerTask):
         if data.flags & 0x10:
             return True
 
+        self._log_target_key_event(msg, data)
+
         if msg in self.KEY_DOWN_MESSAGES:
             self.physical_keys_pressed.add(data.vkCode)
         elif msg in self.KEY_UP_MESSAGES:
@@ -331,6 +394,11 @@ class HeistTask(BaseNTETask, TriggerTask):
 
     def _is_key_pressed(self, key):
         return any(vk_code in self.physical_keys_pressed for vk_code in self._get_vk_codes(key))
+
+    def _is_key_down_by_async_state(self, key):
+        return any(
+            bool(win32api.GetAsyncKeyState(vk_code) & 0x8000) for vk_code in self._get_vk_codes(key)
+        )
 
     def _should_suppress(self, msg, vk_code):
         if msg in self.KEY_UP_MESSAGES:
@@ -352,6 +420,9 @@ class HeistTask(BaseNTETask, TriggerTask):
             keys.update(self.SHIFT_KEYS)
         return keys
 
+    def _is_listener_running(self):
+        return self.listener is not None and self.listener.running and self.listener.is_alive()
+
     def _check_listener_error(self):
         if self.listener is None:
             return False
@@ -361,3 +432,31 @@ class HeistTask(BaseNTETask, TriggerTask):
         except Exception as e:
             logger.error("heist keyboard listener stopped with exception", e)
             return True
+
+    def _log_target_key_event(self, msg, data):
+        if msg not in self.KEY_DOWN_MESSAGES + self.KEY_UP_MESSAGES:
+            return
+        target_name = None
+        if data.vkCode in self._get_vk_codes(self._get_pick_key()):
+            target_name = "pick"
+        elif data.vkCode in self.SHIFT_KEYS:
+            target_name = "quick run"
+        if target_name is None:
+            return
+        action = "down" if msg in self.KEY_DOWN_MESSAGES else "up"
+        self._log_diagnostic(
+            f"listener_{target_name.replace(' ', '_')}_key_{action}",
+            (
+                f"heist listener received {target_name} key {action}: "
+                f"vk={data.vkCode}, flags={data.flags}, active={self._is_active()}"
+            ),
+            self.LISTENER_KEY_LOG_INTERVAL,
+        )
+
+    def _log_diagnostic(self, key, message, interval, level="info"):
+        now = time.time()
+        last_time = self._diagnostic_log_times.get(key, 0)
+        if now - last_time < interval:
+            return
+        self._diagnostic_log_times[key] = now
+        getattr(logger, level)(message)
