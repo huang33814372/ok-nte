@@ -21,6 +21,8 @@ logger = Logger.get_logger(__name__)
 
 
 class NTEInteraction(PostMessageInteraction):
+    _ACTIVATE_REFRESH_INTERVAL = 60 * 60
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.cursor_position = None
@@ -30,6 +32,7 @@ class NTEInteraction(PostMessageInteraction):
         self.qwerty_physical_key_mapper = QwertyPhysicalKeyMapper()
         self._disable_key_mapping = 0
         self._activate_require = True
+        self._next_try_activate_at = -1
         self.hwnd_window.visible_monitors.append(self)
 
     def on_visible(self, visible):
@@ -185,7 +188,12 @@ class NTEInteraction(PostMessageInteraction):
         SendInput(1, ctypes.pointer(i), ctypes.sizeof(INPUT))
 
     def try_activate(self):
+        now = time.monotonic()
         if self._activate_require:
             if not self.hwnd_window.is_foreground():
                 super().try_activate()
+                self._next_try_activate_at = now + self._ACTIVATE_REFRESH_INTERVAL
             self._activate_require = False
+        elif now >= self._next_try_activate_at:
+            super().try_activate()
+            self._next_try_activate_at = now + self._ACTIVATE_REFRESH_INTERVAL
