@@ -2,8 +2,6 @@ import re
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass, fields
-from threading import Lock, Thread
-from typing import List
 
 import cv2
 import numpy as np
@@ -18,6 +16,7 @@ from src.combat.CombatCheck import CombatCheck
 from src.combat.planner import CombatPlanner
 from src.Labels import Labels
 from src.sound_trigger.SoundCombatContext import ACTION_UNSET, SoundCombatContext
+from src.tasks.mixin.CharUIMixin import CharElementUIMixin
 from src.utils import game_filters as gf
 from src.utils import image_utils as iu
 
@@ -52,7 +51,7 @@ class SleepCheckSkip:
             setattr(self, field.name, value)
 
 
-class BaseCombatTask(CombatCheck):
+class BaseCombatTask(CharElementUIMixin, CombatCheck):
     """基础战斗任务类，封装了游戏"鸣潮"中角色自动化操作的通用逻辑。"""
 
     hot_key_verified = False  # 热键是否已验证
@@ -76,9 +75,6 @@ class BaseCombatTask(CombatCheck):
         Element.YELLOW,
     )
     element_ring_index = {element: index for index, element in enumerate(element_ring)}
-    _element_template_cache = {}
-    _element_template_cache_lock = Lock()
-    _element_template_preheat_started = False
 
     def __init__(self, *args, **kwargs):
         """初始化战斗任务。
@@ -103,91 +99,6 @@ class BaseCombatTask(CombatCheck):
         self.clear_element_reactions()
         self.preheat_element_template_cache_async()
         CustomCharManager().preheat_feature_cache_async()
-
-    @staticmethod
-    def _process_template_transparency(img):
-        if img is None:
-            return None
-        if len(img.shape) == 2:
-            return cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-        if img.shape[2] == 4:
-            b, g, r, a = cv2.split(img)
-            black_bg = np.zeros_like(img[:, :, :3])
-            alpha_factor = a.astype(float) / 255.0
-            alpha_factor = cv2.merge([alpha_factor, alpha_factor, alpha_factor])
-
-            foreground = cv2.merge([b, g, r]).astype(float)
-            background = black_bg.astype(float)
-
-            final_img = cv2.add(
-                cv2.multiply(foreground, alpha_factor),
-                cv2.multiply(background, 1.0 - alpha_factor),
-            )
-            return final_img.astype(np.uint8)
-        return img
-
-    @staticmethod
-    def _preprocess_element_template_image(image):
-        return iu.binarize_bgr_by_adaptive_center(image)
-
-    @classmethod
-    def _load_element_template(cls, element):
-        raw_template = cv2.imread(f"assets/esper_icons/{element.value}.png", cv2.IMREAD_UNCHANGED)
-        if raw_template is None:
-            return None
-
-        h, w = raw_template.shape[:2]
-        raw_template = cls._process_template_transparency(raw_template)
-        if raw_template is None:
-            return None
-
-        element_scale = 0.5
-        raw_template = cv2.resize(
-            raw_template,
-            (int(w * element_scale), int(h * element_scale)),
-            interpolation=cv2.INTER_NEAREST,
-        )
-        template_bin = cls._preprocess_element_template_image(raw_template)
-        _, mask = cv2.threshold(template_bin, 127, 255, cv2.THRESH_BINARY)
-        kernel = np.ones((30, 30), np.uint8)
-        mask = cv2.dilate(mask, kernel, iterations=1)
-        return raw_template, mask
-
-    @classmethod
-    def build_element_template_cache(cls):
-        with cls._element_template_cache_lock:
-            if cls._element_template_cache:
-                return
-
-        built_cache = {}
-        for element in cls.element_ring:
-            template_data = cls._load_element_template(element)
-            if template_data is not None:
-                built_cache[element] = template_data
-
-        with cls._element_template_cache_lock:
-            if not cls._element_template_cache:
-                cls._element_template_cache = built_cache
-
-    @classmethod
-    def _preheat_element_template_cache_worker(cls):
-        try:
-            cls.build_element_template_cache()
-            logger.debug(f"preheated {len(cls._element_template_cache)} element templates")
-        except Exception as e:
-            logger.error("Failed to preheat element templates", e)
-
-    @classmethod
-    def preheat_element_template_cache_async(cls):
-        with cls._element_template_cache_lock:
-            if cls._element_template_preheat_started or cls._element_template_cache:
-                return
-            cls._element_template_preheat_started = True
-        Thread(
-            target=cls._preheat_element_template_cache_worker,
-            name="element-template-cache-preheat",
-            daemon=True,
-        ).start()
 
     @property
     def team_size(self):
@@ -982,59 +893,6 @@ class BaseCombatTask(CombatCheck):
             self._apply_sound_config()
         logger.debug(f"load_chars cost {time.perf_counter() - now:.3f}s")
         return ret
-
-    def load_chars_element(self, indices: List[int]) -> dict:
-        results = {}
-        self.build_element_template_cache()
-
-        base_box = self.get_base_char_element_box()
-
-        _frame = self.frame
-        # self.screenshot("load_chars_element", _frame)
-
-        for i in indices:
-            base_scale = 8
-            scale = base_scale * 1440 / self.height
-            current_box = self.get_box_by_char_spacing(base_box, i)
-            crop_img = current_box.crop_frame(_frame)
-            crop_h, crop_w = crop_img.shape[:2]
-            crop_resized = cv2.resize(
-                crop_img,
-                (int(crop_w * scale), int(crop_h * scale)),
-                interpolation=cv2.INTER_NEAREST,
-            )
-            # iu.show_images([crop_resized, crop_img], [f"crop_resized_{i}", f"crop_img_{i}"])
-
-            best_element = Element.DEFAULT
-            max_score = -1.0
-
-            for element in self.element_ring:
-                template_data = self._element_template_cache.get(element)
-                if template_data is None:
-                    continue
-                template_img, template_mask = template_data
-
-                match_score = 0
-                if crop_resized is not None and template_img is not None:
-                    res = cv2.matchTemplate(
-                        crop_resized, template_img, cv2.TM_CCOEFF_NORMED, mask=template_mask
-                    )
-                    res[np.isinf(res)] = 0
-                    _, match_score, _, _ = cv2.minMaxLoc(res)
-
-                if match_score > max_score:
-                    max_score = match_score
-                    best_element = element
-
-            current_box.confidence = max_score
-            current_box.name = best_element.name
-            results[i] = best_element
-            self.draw_boxes(boxes=current_box, color="red")
-            self.log_debug(
-                f"char_{i + 1} identified as {best_element.name} (score: {max_score:.4f})"
-            )
-
-        return results
 
     def is_cycle_full(self) -> bool:
         img = self.box_of_screen_scaled(
