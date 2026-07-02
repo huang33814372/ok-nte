@@ -577,7 +577,7 @@ class BaseChar:
                     result["clicked"] = True
                     result["action_time"] = action_time
 
-            self.sleep(0.01)
+            self.sleep(0.01, sleep_check=False)
 
     def _check_available_action_result(
         self,
