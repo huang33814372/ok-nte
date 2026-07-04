@@ -1025,3 +1025,42 @@ msgstr ""
 
 msgid "使用终结技"
 msgstr ""
+
+msgid "Background Audio Routing"
+msgstr "后台音频路由"
+
+msgid "Enable Background Audio Routing"
+msgstr "启用后台音频路由"
+
+msgid "SoundVolumeView Path"
+msgstr "SoundVolumeView 路径"
+
+msgid "Background Output Device"
+msgstr "后台输出设备"
+
+msgid "Open SoundVolumeView Download Page"
+msgstr "打开 SoundVolumeView 下载页面"
+
+msgid "Optionally route the game to a selected Windows output device while it is in the background. SoundVolumeView is not bundled; select your own downloaded copy."
+msgstr "当游戏处于后台时，可选择性地将游戏音频路由到选定的 Windows 输出设备。本软件未内置 SoundVolumeView，请选择您自己下载的版本。"
+
+msgid "Switch game audio output when the game window leaves the foreground"
+msgstr "当游戏窗口离开前台时，切换游戏音频输出"
+
+msgid "Select SoundVolumeView.exe downloaded from NirSoft"
+msgstr "选择从 NirSoft 下载的 SoundVolumeView.exe"
+
+msgid "Output device used while the game is in the background"
+msgstr "游戏处于后台时使用的输出设备"
+
+msgid "Open the official NirSoft SoundVolumeView page"
+msgstr "打开 NirSoft SoundVolumeView 官方页面"
+
+msgid "SoundVolumeView.exe (SoundVolumeView.exe);;Executable Files (*.exe);;All Files (*)"
+msgstr "SoundVolumeView.exe (SoundVolumeView.exe);;可执行文件 (*.exe);;所有文件 (*)"
+
+msgid "Select SoundVolumeView.exe"
+msgstr "选择 SoundVolumeView.exe"
+
+msgid "Open Download Page"
+msgstr "打开下载页面"

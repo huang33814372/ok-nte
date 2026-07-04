@@ -792,3 +792,42 @@ msgstr "Usar Ultimate"
 
 msgid "设置为0则一直运行"
 msgstr "Definir como 0 para executar indefinidamente"
+
+msgid "Background Audio Routing"
+msgstr "Roteamento de áudio em segundo plano"
+
+msgid "Enable Background Audio Routing"
+msgstr "Habilitar roteamento de áudio em segundo plano"
+
+msgid "SoundVolumeView Path"
+msgstr "Caminho do SoundVolumeView"
+
+msgid "Background Output Device"
+msgstr "Dispositivo de saída em segundo plano"
+
+msgid "Open SoundVolumeView Download Page"
+msgstr "Abrir página de descarga do SoundVolumeView"
+
+msgid "Optionally route the game to a selected Windows output device while it is in the background. SoundVolumeView is not bundled; select your own downloaded copy."
+msgstr "Opcionalmente, roteia o áudio do jogo para um dispositivo de saída do Windows selecionado enquanto estiver em segundo plano. O SoundVolumeView não está incluído; selecione sua própria cópia baixada."
+
+msgid "Switch game audio output when the game window leaves the foreground"
+msgstr "Alternar a saída de áudio do jogo quando a janela do jogo sair do primeiro plano"
+
+msgid "Select SoundVolumeView.exe downloaded from NirSoft"
+msgstr "Selecionar o SoundVolumeView.exe baixado do NirSoft"
+
+msgid "Output device used while the game is in the background"
+msgstr "Dispositivo de saída usado enquanto o jogo está em segundo plano"
+
+msgid "Open the official NirSoft SoundVolumeView page"
+msgstr "Abrir a página oficial do NirSoft SoundVolumeView"
+
+msgid "SoundVolumeView.exe (SoundVolumeView.exe);;Executable Files (*.exe);;All Files (*)"
+msgstr "SoundVolumeView.exe (SoundVolumeView.exe);;Arquivos executáveis (*.exe);;Todos os arquivos (*)"
+
+msgid "Select SoundVolumeView.exe"
+msgstr "Selecionar SoundVolumeView.exe"
+
+msgid "Open Download Page"
+msgstr "Abrir página de download"

@@ -1042,3 +1042,42 @@ msgstr "적룡의 고성 - 용의 고탑 실외 모닥불"
 
 msgid "使用终结技"
 msgstr "궁극기 사용"
+
+msgid "Background Audio Routing"
+msgstr "백그라운드 오디오 라우팅"
+
+msgid "Enable Background Audio Routing"
+msgstr "백그라운드 오디오 라우팅 활성화"
+
+msgid "SoundVolumeView Path"
+msgstr "SoundVolumeView 경로"
+
+msgid "Background Output Device"
+msgstr "백그라운드 출력 장치"
+
+msgid "Open SoundVolumeView Download Page"
+msgstr "SoundVolumeView 다운로드 페이지 열기"
+
+msgid "Optionally route the game to a selected Windows output device while it is in the background. SoundVolumeView is not bundled; select your own downloaded copy."
+msgstr "게임이 백그라운드에 있을 때 선택한 Windows 출력 장치로 게임 오디오를 라우팅할 수 있습니다. SoundVolumeView는 내장되어 있지 않으므로 직접 다운로드한 복사본을 선택하세요."
+
+msgid "Switch game audio output when the game window leaves the foreground"
+msgstr "게임 창이 활성화 상태를 벗어날 때 게임 오디오 출력 전환"
+
+msgid "Select SoundVolumeView.exe downloaded from NirSoft"
+msgstr "NirSoft에서 다운로드한 SoundVolumeView.exe 선택"
+
+msgid "Output device used while the game is in the background"
+msgstr "게임이 백그라운드에 있을 때 사용할 출력 장치"
+
+msgid "Open the official NirSoft SoundVolumeView page"
+msgstr "공식 NirSoft SoundVolumeView 페이지 열기"
+
+msgid "SoundVolumeView.exe (SoundVolumeView.exe);;Executable Files (*.exe);;All Files (*)"
+msgstr "SoundVolumeView.exe (SoundVolumeView.exe);;실행 파일 (*.exe);;모든 파일 (*)"
+
+msgid "Select SoundVolumeView.exe"
+msgstr "SoundVolumeView.exe 선택"
+
+msgid "Open Download Page"
+msgstr "다운로드 페이지 열기"

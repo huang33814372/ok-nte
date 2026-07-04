@@ -1042,3 +1042,42 @@ msgstr "Red Dragon Castle - Dragon Tower Outdoor Campfire"
 
 msgid "使用终结技"
 msgstr "Use Ultimate"
+
+msgid "Background Audio Routing"
+msgstr "Background Audio Routing"
+
+msgid "Enable Background Audio Routing"
+msgstr "Enable Background Audio Routing"
+
+msgid "SoundVolumeView Path"
+msgstr "SoundVolumeView Path"
+
+msgid "Background Output Device"
+msgstr "Background Output Device"
+
+msgid "Open SoundVolumeView Download Page"
+msgstr "Open SoundVolumeView Download Page"
+
+msgid "Optionally route the game to a selected Windows output device while it is in the background. SoundVolumeView is not bundled; select your own downloaded copy."
+msgstr "Optionally route the game to a selected Windows output device while it is in the background. SoundVolumeView is not bundled; select your own downloaded copy."
+
+msgid "Switch game audio output when the game window leaves the foreground"
+msgstr "Switch game audio output when the game window leaves the foreground"
+
+msgid "Select SoundVolumeView.exe downloaded from NirSoft"
+msgstr "Select SoundVolumeView.exe downloaded from NirSoft"
+
+msgid "Output device used while the game is in the background"
+msgstr "Output device used while the game is in the background"
+
+msgid "Open the official NirSoft SoundVolumeView page"
+msgstr "Open the official NirSoft SoundVolumeView page"
+
+msgid "SoundVolumeView.exe (SoundVolumeView.exe);;Executable Files (*.exe);;All Files (*)"
+msgstr "SoundVolumeView.exe (SoundVolumeView.exe);;Executable Files (*.exe);;All Files (*)"
+
+msgid "Select SoundVolumeView.exe"
+msgstr "Select SoundVolumeView.exe"
+
+msgid "Open Download Page"
+msgstr "Open Download Page"
