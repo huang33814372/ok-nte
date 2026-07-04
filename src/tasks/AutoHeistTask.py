@@ -583,7 +583,7 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
             action=lambda: self.operate_click(0.604, 0.701, interval=1),
             range=(0.5359, 0.8139, 0.5852, 0.9062),
             time_out=20,
-            raise_if_not_found=False
+            raise_if_not_found=False,
         ):
             self.log_round_info("点击撤离超时")
             self.abort_heist()
@@ -916,15 +916,11 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
     def is_lock_pick_active(self):
         """检查撬锁转盘 UI 是否正在显示。"""
         box = self.get_box_by_name(Labels.heist_lock_pick).scale(1.5)
-        self.draw_boxes(boxes=box, color="blue")
-        cropped = box.crop_frame(self.frame)
-        cropped = iu.create_color_mask(cropped, text_white_color)
-        # feature = self.get_feature_by_name(Labels.heist_lock_pick).mat
-        # iu.show_images([feature, cropped], ["feature", "cropped"])
-        res, _ = self._find_rotated_template(
+        res, _ = self.find_rotated_template(
             Labels.heist_lock_pick,
-            cropped,
+            box=box,
             threshold=self.LOCK_PICK_MATCH_THRESHOLD,
+            frame_processor=lambda cropped: iu.create_color_mask(cropped, text_white_color),
         )
         return len(res) >= 1
 

@@ -479,3 +479,6 @@ def find_color_enriched_regions(
     if result_boxes:
         communicate.emit_draw_box(boxes=result_boxes, color="red", debug=True)
     return result_boxes
+
+def apply_mask(image, mask):
+    return cv2.bitwise_and(image, image, mask=mask)

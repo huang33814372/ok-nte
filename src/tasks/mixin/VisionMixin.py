@@ -1,6 +1,6 @@
 import math
 import time
-from typing import NamedTuple
+from typing import Callable, NamedTuple
 
 import cv2
 import numpy as np
@@ -456,6 +456,128 @@ class VisionMixin(BaseTask):
         best["score"] = round(best["score"], 3)
         return [best], (time.time() - start_time) * 1000
 
+    def find_rotated_template(
+        self,
+        feature_name,
+        box: Box | str,
+        frame: np.ndarray | None = None,
+        threshold=0.75,
+        angle_range=range(-180, 180, 2),
+        min_non_zero=20,
+        template_angle=0,
+        frame_processor: Callable[[np.ndarray], np.ndarray] | None = None,
+        tolerance_px=2.0,
+        max_distance_px=6.0,
+        min_coverage=0.65,
+        coverage_weight=0.7,
+    ):
+        """
+        使用旋转模板的 chamfer/distance-transform 匹配查找小型二值形状。
+
+        这个方法比 cv2.TM_CCOEFF_NORMED 更容忍局部遮挡：模板白色像素附近只要在
+        ``tolerance_px`` 内有场景白色像素，就会被视为形状轮廓仍然命中。
+
+        :param feature_name: ok feature 名称。
+        :param box: 搜索区域，也可传 box 名称。
+        :param frame: 目标画面；None 时使用当前帧。
+        :param threshold: 综合分数阈值，越高越严格。
+        :param angle_range: 模板旋转角度范围。
+        :param min_non_zero: 场景/模板的最少非零像素。
+        :param template_angle: 模板自身初始角度偏移。
+        :param frame_processor: 在 box 裁剪 frame 后执行的预处理函数。
+        :param tolerance_px: 模板像素允许偏离场景白色像素的距离。
+        :param max_distance_px: 距离惩罚上限。
+        :param min_coverage: 模板白色像素的最低近邻覆盖率。
+        :param coverage_weight: 覆盖率在综合分数中的权重。
+        :return: (results, cost_ms)，results 与 _find_rotated_template 保持同类结构。
+        """
+        start_time = time.time()
+        frame = self.frame if frame is None else frame
+        if frame is None:
+            return [], (time.time() - start_time) * 1000
+
+        if isinstance(box, str):
+            box = self.get_box_by_name(box)
+
+        scene = box.crop_frame(frame)
+        box.name = f"search_{feature_name}"
+        self.draw_boxes(boxes=box, color="blue")
+
+        if scene is None or scene.size == 0:
+            return [], (time.time() - start_time) * 1000
+
+        if frame_processor is not None:
+            scene = frame_processor(scene)
+            if scene is None or scene.size == 0:
+                return [], (time.time() - start_time) * 1000
+
+        scene_mask = self._binary_mask(scene)
+        if cv2.countNonZero(scene_mask) < min_non_zero:
+            return [], (time.time() - start_time) * 1000
+
+        max_distance_px = max(float(max_distance_px), 1.0)
+        tolerance_px = max(float(tolerance_px), 0.0)
+        coverage_weight = min(max(float(coverage_weight), 0.0), 1.0)
+
+        scene_distance = cv2.distanceTransform(255 - scene_mask, cv2.DIST_L2, 3)
+        scene_distance = np.minimum(scene_distance, max_distance_px).astype(np.float32)
+        scene_near = (scene_distance <= tolerance_px).astype(np.float32)
+
+        template = self.get_feature_by_name(feature_name).mat
+        best = None
+        for angle, rotated_template in self._get_rotated_templates(
+            template,
+            angle_range=angle_range,
+            min_non_zero=min_non_zero,
+            cache_key=feature_name,
+        ):
+            template_mask = self._binary_mask(rotated_template)
+            template_non_zero = cv2.countNonZero(template_mask)
+            if template_non_zero < min_non_zero:
+                continue
+
+            th, tw = template_mask.shape[:2]
+            if th > scene_mask.shape[0] or tw > scene_mask.shape[1]:
+                continue
+
+            template_float = (template_mask > 0).astype(np.float32)
+            distance_sum = cv2.matchTemplate(scene_distance, template_float, cv2.TM_CCORR)
+            coverage_sum = cv2.matchTemplate(scene_near, template_float, cv2.TM_CCORR)
+            avg_distance = distance_sum / template_non_zero
+            coverage = coverage_sum / template_non_zero
+            distance_score = 1.0 - (avg_distance / max_distance_px)
+            score_map = coverage_weight * coverage + (1.0 - coverage_weight) * distance_score
+
+            _, score, _, top_left = cv2.minMaxLoc(score_map)
+            candidate_coverage = float(coverage[top_left[1], top_left[0]])
+            candidate_distance_score = float(distance_score[top_left[1], top_left[0]])
+            if best is None or score > best["score"]:
+                matched_box = Box(
+                    box.x + top_left[0],
+                    box.y + top_left[1],
+                    tw,
+                    th,
+                    name=feature_name,
+                )
+                best = {
+                    "center": (top_left[0] + tw // 2, top_left[1] + th // 2),
+                    "angle": self._normalize_angle(angle + template_angle),
+                    "match_angle": angle,
+                    "score": float(score),
+                    "coverage": candidate_coverage,
+                    "distance_score": candidate_distance_score,
+                    "box": matched_box,
+                }
+
+        if best is None or best["score"] < threshold or best["coverage"] < min_coverage:
+            return [], (time.time() - start_time) * 1000
+
+        self.draw_boxes(boxes=best["box"], color="red")
+        best["score"] = round(best["score"], 3)
+        best["coverage"] = round(best["coverage"], 3)
+        best["distance_score"] = round(best["distance_score"], 3)
+        return [best], (time.time() - start_time) * 1000
+
     def _get_rotated_templates(
         self,
         template: np.ndarray,
@@ -492,6 +614,13 @@ class VisionMixin(BaseTask):
         if mat.ndim == 2:
             return mat
         return mat[:, :, 0]
+
+    @staticmethod
+    def _binary_mask(mat: np.ndarray):
+        mask = VisionMixin._first_channel_mask(mat)
+        if mask.dtype != np.uint8:
+            mask = cv2.normalize(mask, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+        return np.where(mask > 0, 255, 0).astype(np.uint8)
 
     @staticmethod
     def _normalize_angle(angle):

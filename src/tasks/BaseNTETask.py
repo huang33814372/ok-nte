@@ -312,13 +312,17 @@ class BaseNTETask(CharUIMixin, MovementMixin, VisionMixin, OgMixin, LogGateMixin
 
     def check_mini_map_arrow(self) -> list[dict]:
         frame = self.frame
-        cropped = self.box_of_screen(0.0691, 0.1083, 0.0949, 0.1493, name="in_world").crop_frame(
-            frame
-        )
-        cropped = iu.binarize_bgr_by_brightness(cropped, threshold=200)
+        box = self.box_of_screen(0.0691, 0.1083, 0.0949, 0.1493, name="in_world")
         # now = time.time()
-        res, _ = self._find_rotated_template(
-            Labels.mini_map_arrow, cropped, threshold=0.75, template_angle=15.5
+        res, _ = self.find_rotated_template(
+            Labels.mini_map_arrow,
+            box=box,
+            frame=frame,
+            threshold=0.75,
+            template_angle=15.5,
+            frame_processor=lambda cropped: iu.binarize_bgr_by_brightness(
+                cropped, threshold=200, to_bgr=False
+            ),
         )
         # self.log_debug(f"in_world {res}, cost {time.time() - now} ms")
         return res
