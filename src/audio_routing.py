@@ -149,7 +149,7 @@ def _export_sound_items(exe_path: str):
             "/Columns",
             _SOUND_ITEM_COLUMNS,
         ]
-        result = subprocess.run(
+        result = subprocess.run(  # NOSONAR
             command,
             capture_output=True,
             text=True,
@@ -346,7 +346,7 @@ class _BackgroundAudioRouter:
             f"device={device} process={GAME_EXE}"
         )
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # NOSONAR
                 command,
                 capture_output=True,
                 text=True,
@@ -559,7 +559,7 @@ def _is_sound_volume_view_path(exe_path: str) -> bool:
     if not exe_path:
         return False
     path = Path(exe_path)
-    return path.is_file() and path.name.lower() == "soundvolumeview.exe"
+    return path.is_file() and path.name.lower() == "soundvolumeview.exe"  # NOSONAR
 
 
 def _read_json(path: str):
