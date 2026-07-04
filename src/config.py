@@ -5,6 +5,7 @@ import os
 from ok import Box, ConfigOption
 
 from src import GAME_EXE
+from src.audio_routing import create_background_audio_routing_config_option
 from src.interaction.NTEInteraction import NTEInteraction
 from src.process_feature import process_feature
 
@@ -58,6 +59,8 @@ sound_trigger_config_option = ConfigOption(
     },
 )
 
+background_audio_routing_config_option = create_background_audio_routing_config_option()
+
 
 def blur_area(width, height):
     return Box(width * 0, height * 0.9769, to_x=width * 0.0943, to_y=height * 1)
@@ -68,7 +71,12 @@ config = {
     "debug": False,  # Optional, default: False
     "use_gui": True,  # 目前只支持True
     "config_folder": "configs",  # 最好不要修改
-    "global_configs": [key_config_option, monthly_card_config_option, sound_trigger_config_option],
+    "global_configs": [
+        key_config_option,
+        monthly_card_config_option,
+        sound_trigger_config_option,
+        background_audio_routing_config_option,
+    ],
     # "screenshot_processor": make_bottom_left_black,  # 在截图的时候对frame进行修改, 可选
     "blur_area": blur_area,
     "gui_icon": "icons/icon.png",  # 窗口图标, 最好不需要修改文件名
