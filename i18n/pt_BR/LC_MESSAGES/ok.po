@@ -799,35 +799,35 @@ msgstr "Roteamento de áudio em segundo plano"
 msgid "Enable Background Audio Routing"
 msgstr "Habilitar roteamento de áudio em segundo plano"
 
-msgid "SoundVolumeView Path"
-msgstr "Caminho do SoundVolumeView"
+msgid "SoundVolumeCommandLine Path"
+msgstr "Caminho do SoundVolumeCommandLine"
 
 msgid "Background Output Device"
 msgstr "Dispositivo de saída em segundo plano"
 
-msgid "Open SoundVolumeView Download Page"
-msgstr "Abrir página de descarga do SoundVolumeView"
+msgid "Open SoundVolumeCommandLine Download Page"
+msgstr "Abrir página de descarga do SoundVolumeCommandLine"
 
-msgid "Optionally route the game to a selected Windows output device while it is in the background. SoundVolumeView is not bundled; select your own downloaded copy."
-msgstr "Opcionalmente, roteia o áudio do jogo para um dispositivo de saída do Windows selecionado enquanto estiver em segundo plano. O SoundVolumeView não está incluído; selecione sua própria cópia baixada."
+msgid "Optionally route the game to a selected Windows output device while it is in the background. SoundVolumeCommandLine is not bundled; select your own downloaded copy."
+msgstr "Opcionalmente, roteia o áudio do jogo para um dispositivo de saída do Windows selecionado enquanto estiver em segundo plano. O SoundVolumeCommandLine não está incluído; selecione sua própria cópia baixada."
 
 msgid "Switch game audio output when the game window leaves the foreground"
 msgstr "Alternar a saída de áudio do jogo quando a janela do jogo sair do primeiro plano"
 
-msgid "Select SoundVolumeView.exe downloaded from NirSoft"
-msgstr "Selecionar o SoundVolumeView.exe baixado do NirSoft"
+msgid "Select svcl.exe downloaded from NirSoft"
+msgstr "Selecionar o svcl.exe baixado do NirSoft"
 
 msgid "Output device used while the game is in the background"
 msgstr "Dispositivo de saída usado enquanto o jogo está em segundo plano"
 
-msgid "Open the official NirSoft SoundVolumeView page"
-msgstr "Abrir a página oficial do NirSoft SoundVolumeView"
+msgid "Open the official NirSoft SoundVolumeCommandLine page"
+msgstr "Abrir a página oficial do NirSoft SoundVolumeCommandLine"
 
-msgid "SoundVolumeView.exe (SoundVolumeView.exe);;Executable Files (*.exe);;All Files (*)"
-msgstr "SoundVolumeView.exe (SoundVolumeView.exe);;Arquivos executáveis (*.exe);;Todos os arquivos (*)"
+msgid "SoundVolumeCommandLine (svcl.exe);;Executable Files (*.exe);;All Files (*)"
+msgstr "SoundVolumeCommandLine (svcl.exe);;Arquivos executáveis (*.exe);;Todos os arquivos (*)"
 
-msgid "Select SoundVolumeView.exe"
-msgstr "Selecionar SoundVolumeView.exe"
+msgid "Select svcl.exe"
+msgstr "Selecionar svcl.exe"
 
 msgid "Open Download Page"
 msgstr "Abrir página de download"

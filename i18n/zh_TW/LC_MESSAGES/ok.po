@@ -1049,35 +1049,35 @@ msgstr "背景音訊路由"
 msgid "Enable Background Audio Routing"
 msgstr "啟用背景音訊路由"
 
-msgid "SoundVolumeView Path"
-msgstr "SoundVolumeView 路徑"
+msgid "SoundVolumeCommandLine Path"
+msgstr "SoundVolumeCommandLine 路徑"
 
 msgid "Background Output Device"
 msgstr "背景輸出裝置"
 
-msgid "Open SoundVolumeView Download Page"
-msgstr "開啟 SoundVolumeView 下載頁面"
+msgid "Open SoundVolumeCommandLine Download Page"
+msgstr "開啟 SoundVolumeCommandLine 下載頁面"
 
-msgid "Optionally route the game to a selected Windows output device while it is in the background. SoundVolumeView is not bundled; select your own downloaded copy."
-msgstr "當遊戲處於背景時，可選擇性地將遊戲音訊路由到選定的 Windows 輸出裝置。本軟體未內置 SoundVolumeView，請選擇您自己下載的版本。"
+msgid "Optionally route the game to a selected Windows output device while it is in the background. SoundVolumeCommandLine is not bundled; select your own downloaded copy."
+msgstr "當遊戲處於背景時，可選擇性地將遊戲音訊路由到選定的 Windows 輸出裝置。本軟體未內置 SoundVolumeCommandLine，請選擇您自己下載的版本。"
 
 msgid "Switch game audio output when the game window leaves the foreground"
 msgstr "當遊戲視窗離開前景時，切換遊戲音訊輸出"
 
-msgid "Select SoundVolumeView.exe downloaded from NirSoft"
-msgstr "選擇從 NirSoft 下載的 SoundVolumeView.exe"
+msgid "Select svcl.exe downloaded from NirSoft"
+msgstr "選擇從 NirSoft 下載的 svcl.exe"
 
 msgid "Output device used while the game is in the background"
 msgstr "遊戲處於背景時使用的輸出裝置"
 
-msgid "Open the official NirSoft SoundVolumeView page"
-msgstr "開啟 NirSoft SoundVolumeView 官方頁面"
+msgid "Open the official NirSoft SoundVolumeCommandLine page"
+msgstr "開啟 NirSoft SoundVolumeCommandLine 官方頁面"
 
-msgid "SoundVolumeView.exe (SoundVolumeView.exe);;Executable Files (*.exe);;All Files (*)"
-msgstr "SoundVolumeView.exe (SoundVolumeView.exe);;可執行檔 (*.exe);;所有檔案 (*)"
+msgid "SoundVolumeCommandLine (svcl.exe);;Executable Files (*.exe);;All Files (*)"
+msgstr "SoundVolumeCommandLine (svcl.exe);;可執行檔 (*.exe);;所有檔案 (*)"
 
-msgid "Select SoundVolumeView.exe"
-msgstr "選擇 SoundVolumeView.exe"
+msgid "Select svcl.exe"
+msgstr "選擇 svcl.exe"
 
 msgid "Open Download Page"
 msgstr "開啟下載頁面"

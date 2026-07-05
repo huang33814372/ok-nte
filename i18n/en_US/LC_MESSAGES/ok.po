@@ -1049,35 +1049,35 @@ msgstr "Background Audio Routing"
 msgid "Enable Background Audio Routing"
 msgstr "Enable Background Audio Routing"
 
-msgid "SoundVolumeView Path"
-msgstr "SoundVolumeView Path"
+msgid "SoundVolumeCommandLine Path"
+msgstr "SoundVolumeCommandLine Path"
 
 msgid "Background Output Device"
 msgstr "Background Output Device"
 
-msgid "Open SoundVolumeView Download Page"
-msgstr "Open SoundVolumeView Download Page"
+msgid "Open SoundVolumeCommandLine Download Page"
+msgstr "Open SoundVolumeCommandLine Download Page"
 
-msgid "Optionally route the game to a selected Windows output device while it is in the background. SoundVolumeView is not bundled; select your own downloaded copy."
-msgstr "Optionally route the game to a selected Windows output device while it is in the background. SoundVolumeView is not bundled; select your own downloaded copy."
+msgid "Optionally route the game to a selected Windows output device while it is in the background. SoundVolumeCommandLine is not bundled; select your own downloaded copy."
+msgstr "Optionally route the game to a selected Windows output device while it is in the background. SoundVolumeCommandLine is not bundled; select your own downloaded copy."
 
 msgid "Switch game audio output when the game window leaves the foreground"
 msgstr "Switch game audio output when the game window leaves the foreground"
 
-msgid "Select SoundVolumeView.exe downloaded from NirSoft"
-msgstr "Select SoundVolumeView.exe downloaded from NirSoft"
+msgid "Select svcl.exe downloaded from NirSoft"
+msgstr "Select svcl.exe downloaded from NirSoft"
 
 msgid "Output device used while the game is in the background"
 msgstr "Output device used while the game is in the background"
 
-msgid "Open the official NirSoft SoundVolumeView page"
-msgstr "Open the official NirSoft SoundVolumeView page"
+msgid "Open the official NirSoft SoundVolumeCommandLine page"
+msgstr "Open the official NirSoft SoundVolumeCommandLine page"
 
-msgid "SoundVolumeView.exe (SoundVolumeView.exe);;Executable Files (*.exe);;All Files (*)"
-msgstr "SoundVolumeView.exe (SoundVolumeView.exe);;Executable Files (*.exe);;All Files (*)"
+msgid "SoundVolumeCommandLine (svcl.exe);;Executable Files (*.exe);;All Files (*)"
+msgstr "SoundVolumeCommandLine (svcl.exe);;Executable Files (*.exe);;All Files (*)"
 
-msgid "Select SoundVolumeView.exe"
-msgstr "Select SoundVolumeView.exe"
+msgid "Select svcl.exe"
+msgstr "Select svcl.exe"
 
 msgid "Open Download Page"
 msgstr "Open Download Page"

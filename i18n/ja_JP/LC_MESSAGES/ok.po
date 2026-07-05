@@ -1049,35 +1049,35 @@ msgstr "バックグラウンドオーディオルーティング"
 msgid "Enable Background Audio Routing"
 msgstr "バックグラウンドオーディオルーティングを有効にする"
 
-msgid "SoundVolumeView Path"
-msgstr "SoundVolumeViewのパス"
+msgid "SoundVolumeCommandLine Path"
+msgstr "SoundVolumeCommandLineのパス"
 
 msgid "Background Output Device"
 msgstr "バックグラウンド出力デバイス"
 
-msgid "Open SoundVolumeView Download Page"
-msgstr "SoundVolumeViewダウンロードページを開く"
+msgid "Open SoundVolumeCommandLine Download Page"
+msgstr "SoundVolumeCommandLineダウンロードページを開く"
 
-msgid "Optionally route the game to a selected Windows output device while it is in the background. SoundVolumeView is not bundled; select your own downloaded copy."
-msgstr "ゲームがバックグラウンドにある間、ゲーム音声を指定したWindows出力デバイスにルーティングします。SoundVolumeViewは同梱されていません。ダウンロードしたファイルを選択してください。"
+msgid "Optionally route the game to a selected Windows output device while it is in the background. SoundVolumeCommandLine is not bundled; select your own downloaded copy."
+msgstr "ゲームがバックグラウンドにある間、ゲーム音声を指定したWindows出力デバイスにルーティングします。SoundVolumeCommandLineは同梱されていません。ダウンロードしたファイルを選択してください。"
 
 msgid "Switch game audio output when the game window leaves the foreground"
 msgstr "ゲームウィンドウが最前面（アクティブ）から外れたときにゲームの音声出力を切り替える"
 
-msgid "Select SoundVolumeView.exe downloaded from NirSoft"
-msgstr "NirSoftからダウンロードしたSoundVolumeView.exeを選択する"
+msgid "Select svcl.exe downloaded from NirSoft"
+msgstr "NirSoftからダウンロードしたsvcl.exeを選択する"
 
 msgid "Output device used while the game is in the background"
 msgstr "ゲームがバックグラウンドにあるときに使用する出力デバイス"
 
-msgid "Open the official NirSoft SoundVolumeView page"
-msgstr "NirSoft SoundVolumeViewの公式サイトを開く"
+msgid "Open the official NirSoft SoundVolumeCommandLine page"
+msgstr "NirSoft SoundVolumeCommandLineの公式サイトを開く"
 
-msgid "SoundVolumeView.exe (SoundVolumeView.exe);;Executable Files (*.exe);;All Files (*)"
-msgstr "SoundVolumeView.exe (SoundVolumeView.exe);;実行可能ファイル (*.exe);;すべてのファイル (*)"
+msgid "SoundVolumeCommandLine (svcl.exe);;Executable Files (*.exe);;All Files (*)"
+msgstr "SoundVolumeCommandLine (svcl.exe);;実行可能ファイル (*.exe);;すべてのファイル (*)"
 
-msgid "Select SoundVolumeView.exe"
-msgstr "SoundVolumeView.exeの選択"
+msgid "Select svcl.exe"
+msgstr "svcl.exeの選択"
 
 msgid "Open Download Page"
 msgstr "ダウンロードページを開く"
