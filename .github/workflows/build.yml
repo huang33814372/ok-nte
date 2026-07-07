@@ -62,7 +62,7 @@ jobs:
 
       - name: Run tests
         run: |
-          python -m unittest discover -s tests -p "*test*.py" -v
+          python -m unittest discover -s tests -p "*test*.py" --top-level-directory . -v
 
       - name: Sync Repositories # 同步部分代码(deploy.txt中), 合并tag中间更新日志, 到更新库, 以减少用户更新使用的git库大小
         id: sync   # Give the step an ID to access its outputs

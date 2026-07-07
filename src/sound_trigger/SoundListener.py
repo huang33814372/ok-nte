@@ -112,6 +112,8 @@ class SoundListener:
         if os.path.exists(cache_path) and os.path.exists(path):
             if os.path.getmtime(cache_path) > os.path.getmtime(path):
                 return np.load(cache_path)
+        if not os.path.exists(path):
+            raise FileNotFoundError(path)
 
         waveform, _ = librosa.load(path, sr=self.used_sr)
         waveform = self._filtering(waveform)

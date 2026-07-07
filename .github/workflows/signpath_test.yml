@@ -87,7 +87,7 @@ jobs:
             Remove-Item "Env:\$_" -ErrorAction SilentlyContinue
           }
 
-          python -m unittest discover -s tests -p "*test*.py" -v
+          python -m unittest discover -s tests -p "*test*.py" --top-level-directory . -v
 
       - name: pyappify build-exe-only
         id: build-exe-only

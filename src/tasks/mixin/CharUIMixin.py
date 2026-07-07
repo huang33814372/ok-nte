@@ -4,7 +4,7 @@ from threading import Lock, Thread
 
 import cv2
 import numpy as np
-from ok import BaseTask, Box, Logger
+from ok import BaseTask, Box, Logger, get_path_relative_to_exe
 
 from src.char.BaseChar import Element
 from src.Labels import Labels
@@ -292,7 +292,8 @@ class CharElementUIMixin(BaseTask):
 
     @classmethod
     def _load_element_template(cls, element):
-        raw_template = cv2.imread(f"assets/esper_icons/{element.value}.png", cv2.IMREAD_UNCHANGED)
+        path = get_path_relative_to_exe("assets", "esper_icons", f"{element.value}.png")
+        raw_template = cv2.imread(path, cv2.IMREAD_UNCHANGED)
         if raw_template is None:
             return None
 
