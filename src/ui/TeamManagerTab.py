@@ -69,18 +69,19 @@ class NewCharDialog(MessageBoxBase):
         self.tip_label = BodyLabel(og.app.tr("※ 列表可直接输入并创建"))
         self.viewLayout.addWidget(self.tip_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        self.existing_chars = list(self.manager.get_all_characters().keys())
         self.char_combo = SearchableComboBox()
         self.char_combo.setPlaceholderText(self.tr_name_ph)
-        self.char_combo.addItems([""] + self.existing_chars)
+        self.char_combo.addItem("", userData="")
+        for char_id, char_data in self.manager.get_all_characters().items():
+            self.char_combo.addItem(char_data["char_name"], userData=char_id)
         self.char_combo.currentTextChanged.connect(self._on_char_select)
         self.viewLayout.addWidget(self.char_combo)
 
         self.combo_list = SearchableComboBox()
         self.combo_list.setPlaceholderText(self.tr_list_ph)
         self.combo_list.addItem("", userData="")
-        for label, combo_ref in self.manager.get_all_combo_items():
-            self.combo_list.addItem(label, userData=combo_ref)
+        for combo_name, combo_id in self.manager.get_all_combo_items(with_builtin_prefix=True):
+            self.combo_list.addItem(combo_name, userData=combo_id)
         self.viewLayout.addWidget(self.combo_list)
 
         self.widget.setMinimumWidth(320)
@@ -88,28 +89,38 @@ class NewCharDialog(MessageBoxBase):
     def _on_char_select(self, text):
         if not text:
             return
-        char_info = self.manager.get_character_info(text)
-        combo_value = char_info.get("combo_ref", "") if isinstance(char_info, dict) else ""
-        if combo_value:
-            combo_ref = self.manager.to_combo_ref(combo_value)
-            idx = self.combo_list.findData(combo_ref)
+        idx = self.char_combo.findText(text)
+        char_id = self.char_combo.itemData(idx) if idx >= 0 else ""
+        char_info = self.manager.get_character_info_by_id(char_id)
+        combo_id = char_info["combo_id"] if char_info else ""
+        if combo_id:
+            idx = self.combo_list.findData(combo_id)
             if idx >= 0:
                 self.combo_list.setCurrentIndex(idx)
             else:
-                self.combo_list.setCurrentText(self.manager.to_combo_label(combo_ref))
-        elif isinstance(char_info, dict):
+                self.combo_list.setCurrentText(
+                    self.manager.get_combo_name(combo_id, with_builtin_prefix=True)
+                )
+        elif char_info:
             self.combo_list.setCurrentIndex(0)
 
     def get_data(self):
         char_name = self.char_combo.currentText().strip()
-        combo_label = self.combo_list.currentText().strip()
-        combo_ref = self.manager.to_combo_ref(combo_label)
+        idx_char = self.char_combo.findText(char_name)
+        char_id = self.char_combo.itemData(idx_char) if idx_char >= 0 else ""
+
+        combo_name = self.combo_list.currentText().strip()
+        combo_id = ""
         idx = self.combo_list.currentIndex()
-        if idx >= 0 and combo_label == self.combo_list.itemText(idx):
+        if idx >= 0 and combo_name == self.combo_list.itemText(idx):
             data = self.combo_list.itemData(idx)
             if isinstance(data, str):
-                combo_ref = data
-        return char_name, combo_ref
+                combo_id = data
+        if not char_name.strip():
+            combo_id = ""
+            combo_name = ""
+            char_id = ""
+        return char_name, char_id, combo_id, combo_name
 
 
 class SlotCard(CardWidget):
@@ -151,7 +162,7 @@ class SlotCard(CardWidget):
         self.current_mat = None
         self.current_w = 0
         self.current_h = 0
-        self.current_match_name = ""
+        self.current_match_char_id = ""
         self.current_confidence = None
 
     def _status_text(self, text, confidence=None):
@@ -159,11 +170,11 @@ class SlotCard(CardWidget):
             return text
         return f"{text}\n{self.tr_confidence.format(confidence)}"
 
-    def update_result(self, mat, w, h, match_name, confidence=None):
+    def update_result(self, mat, w, h, match_char_id, confidence=None):
         self.current_mat = mat
         self.current_w = w
         self.current_h = h
-        self.current_match_name = match_name or ""
+        self.current_match_char_id = match_char_id or ""
         self.current_confidence = confidence
         if mat is not None and getattr(mat, "size", 0) > 0:
             pixmap = cv_to_pixmap(mat)
@@ -180,9 +191,11 @@ class SlotCard(CardWidget):
             empty_pixmap.fill(Qt.GlobalColor.transparent)
             self.image.setImage(empty_pixmap)
 
-        if match_name:
+        if match_char_id:
+            char_info = self.manager.get_character_info_by_id(match_char_id)
+            display_name = char_info["char_name"] if char_info else match_char_id
             self.status.setText(
-                self._status_text(self.tr_match_success.format(match_name), confidence)
+                self._status_text(self.tr_match_success.format(display_name), confidence)
             )
             if confidence is not None and confidence > 0.95:
                 self.btn_act.setEnabled(False)
@@ -201,9 +214,9 @@ class SlotCard(CardWidget):
             self.btn_act.hide()
 
     def on_action(self):
-        if self.current_match_name and self.current_mat is not None:
+        if self.current_match_char_id and self.current_mat is not None:
             self.manager.add_feature_to_character(
-                self.current_match_name,
+                self.current_match_char_id,
                 self.current_mat,
                 width=self.current_w,
                 height=self.current_h,
@@ -212,7 +225,7 @@ class SlotCard(CardWidget):
                 self.current_mat,
                 self.current_w,
                 self.current_h,
-                self.current_match_name,
+                self.current_match_char_id,
                 self.current_confidence,
             )
             self.btn_act.setText(self.tr_feature_added_btn)
@@ -222,26 +235,26 @@ class SlotCard(CardWidget):
 
         dialog = NewCharDialog(self.current_mat, self.manager, self.window())
         if dialog.exec():
-            char_name, combo_ref = dialog.get_data()
-            if char_name and self.current_mat is not None:
+            char_name, char_id, combo_id, combo_name = dialog.get_data()
+            if char_id or char_name:
+                if combo_name and not combo_id:
+                    combo_id = self.manager.add_combo(combo_name, "")
+                if not char_id and char_name:
+                    char_id = self.manager.create_character(char_name, combo_id)
+                elif char_id:
+                    self.manager.update_character(char_id, combo_id=combo_id)
+                
                 self.manager.add_feature_to_character(
-                    char_name,
+                    char_id,
                     self.current_mat,
                     width=self.current_w,
                     height=self.current_h,
                 )
-                self.manager.add_character(char_name, combo_ref)
-                if (
-                    combo_ref
-                    and not self.manager.is_builtin_combo(combo_ref)
-                    and not self.manager.is_custom_combo_exist(combo_ref)
-                ):
-                    self.manager.add_combo(combo_ref, "")
                 self.update_result(
                     self.current_mat,
                     self.current_w,
                     self.current_h,
-                    char_name,
+                    char_id,
                     1.0,
                 )
                 char_manager_signals.refresh_tab.emit()
@@ -279,7 +292,7 @@ class FixedTeamSlotCard(CardWidget):
         self.char_combo.currentTextChanged.connect(self._on_char_select)
         self.reload_options()
 
-    def _resolve_combo_ref(self, text: str | None = None) -> str:
+    def _resolve_combo_id(self, text: str | None = None) -> str:
         if text is None:
             text = self.combo_list.currentText()
         text = str(text or "").strip()
@@ -288,64 +301,91 @@ class FixedTeamSlotCard(CardWidget):
             data = self.combo_list.itemData(idx)
             if isinstance(data, str):
                 return data
-        return self.manager.to_combo_ref(text)
+        return ""
 
-    def _set_combo_by_ref(self, combo_ref: str):
-        combo_ref = self.manager.to_combo_ref(combo_ref)
-        combo_label = self.manager.to_combo_label(combo_ref)
-        idx = self.combo_list.findData(combo_ref)
+    def _set_combo_by_id(self, combo_id: str):
+        combo_name = self.manager.get_combo_name(combo_id, with_builtin_prefix=True)
+        idx = self.combo_list.findData(combo_id)
         if idx >= 0:
             self.combo_list.setCurrentIndex(idx)
         else:
-            self.combo_list.setCurrentText(combo_label)
+            self.combo_list.addItem(combo_name, userData=combo_id)
+            self.combo_list.setCurrentIndex(self.combo_list.count() - 1)
 
     def reload_options(self):
-        current_char, current_combo_ref = self.get_data()
+        current_char_name, current_char_id, current_combo_id, current_combo_name = self.get_data()
 
         self.char_combo.blockSignals(True)
         self.char_combo.clear()
-        self.char_combo.addItem("")
-        for name in self.manager.get_all_characters().keys():
-            self.char_combo.addItem(name)
-        self.char_combo.setCurrentText(current_char)
+        self.char_combo.addItem("", userData="")
+        for char_id, char_data in self.manager.get_all_characters().items():
+            self.char_combo.addItem(char_data["char_name"], userData=char_id)
+
+        idx = self.char_combo.findData(current_char_id) if current_char_id else -1
+        if idx >= 0:
+            self.char_combo.setCurrentIndex(idx)
+        else:
+            self.char_combo.setCurrentText(current_char_name)
         self.char_combo.blockSignals(False)
 
         self.combo_list.blockSignals(True)
         self.combo_list.clear()
         self.combo_list.addItem("", userData="")
-        for label, combo_ref in self.manager.get_all_combo_items():
-            self.combo_list.addItem(label, userData=combo_ref)
-        self._set_combo_by_ref(current_combo_ref)
+        for combo_name, combo_id in self.manager.get_all_combo_items(with_builtin_prefix=True):
+            self.combo_list.addItem(combo_name, userData=combo_id)
+        if current_combo_id:
+            self._set_combo_by_id(current_combo_id)
+        else:
+            self.combo_list.setCurrentText(current_combo_name)
         self.combo_list.blockSignals(False)
 
     def _on_char_select(self, text):
         if not text:
             return
-        char_info = self.manager.get_character_info(text)
-        combo_value = char_info.get("combo_ref", "") if isinstance(char_info, dict) else ""
-        if combo_value:
-            self._set_combo_by_ref(combo_value)
-        elif isinstance(char_info, dict):
+        idx = self.char_combo.findText(text)
+        char_id = self.char_combo.itemData(idx) if idx >= 0 else ""
+        char_info = self.manager.get_character_info_by_id(char_id)
+        combo_id = char_info["combo_id"] if char_info else ""
+        if combo_id:
+            self._set_combo_by_id(combo_id)
+        elif char_info:
             self.combo_list.setCurrentIndex(0)
 
-    def set_data(self, char_name: str, combo_ref: str):
+    def set_data(self, char_id: str, combo_id: str):
         self.char_combo.blockSignals(True)
-        self.char_combo.setCurrentText(char_name)
+        idx = self.char_combo.findData(char_id) if char_id else -1
+        if idx >= 0:
+            self.char_combo.setCurrentIndex(idx)
+        else:
+            char_info = self.manager.get_character_info_by_id(char_id)
+            if char_info:
+                self.char_combo.addItem(char_info["char_name"], userData=char_id)
+                self.char_combo.setCurrentIndex(self.char_combo.count() - 1)
+            else:
+                self.char_combo.setCurrentIndex(-1)
+                self.char_combo.setCurrentText("")
         self.char_combo.blockSignals(False)
 
         self.combo_list.blockSignals(True)
-        if combo_ref:
-            self._set_combo_by_ref(combo_ref)
+        if combo_id:
+            self._set_combo_by_id(combo_id)
         else:
-            self.combo_list.setCurrentIndex(0)
+            self.combo_list.setCurrentIndex(-1)
+            self.combo_list.setCurrentText("")
         self.combo_list.blockSignals(False)
 
     def get_data(self):
         char_name = self.char_combo.currentText().strip()
-        combo_ref = self._resolve_combo_ref()
-        if not char_name:
-            combo_ref = ""
-        return char_name, combo_ref
+        idx_char = self.char_combo.findText(char_name)
+        char_id = self.char_combo.itemData(idx_char) if idx_char >= 0 else ""
+
+        combo_name = self.combo_list.currentText().strip()
+        combo_id = self._resolve_combo_id(combo_name)
+        if not char_id and not char_name:
+            combo_id = ""
+            combo_name = ""
+            char_name = ""
+        return char_name, char_id, combo_id, combo_name
 
 
 class TeamManagerTab(CustomTab):
@@ -569,23 +609,23 @@ class TeamManagerTab(CustomTab):
         slots = []
         filled_count = 0
         for card in self.fixed_team_slots:
-            char_name, combo_ref = card.get_data()
-            if char_name:
+            char_name, char_id, combo_id, combo_name = card.get_data()
+            if char_id or char_name:
                 filled_count += 1
                 if persist:
-                    if (
-                        combo_ref
-                        and not self.manager.is_builtin_combo(combo_ref)
-                        and not self.manager.is_custom_combo_exist(combo_ref)
-                    ):
-                        self.manager.add_combo(combo_ref, "")
-                    self.manager.add_character(char_name, combo_ref)
+                    if combo_name and not combo_id:
+                        combo_id = self.manager.add_combo(combo_name, "")
+                    if not char_id and char_name:
+                        char_id = self.manager.create_character(char_name, combo_id)
+                    if char_id:
+                        self.manager.update_character(char_id, combo_id=combo_id)
             else:
-                combo_ref = ""
+                combo_id = ""
+                char_id = ""
             slots.append(
                 {
-                    "char_name": char_name,
-                    "combo_ref": combo_ref,
+                    "char_id": char_id,
+                    "combo_id": combo_id,
                 }
             )
         return slots, filled_count
@@ -617,7 +657,8 @@ class TeamManagerTab(CustomTab):
         slots = fixed_team.get("slots", [])
         for i, card in enumerate(self.fixed_team_slots):
             slot = slots[i] if i < len(slots) else {}
-            card.set_data(slot.get("char_name", ""), slot.get("combo_ref", ""))
+            char_id = slot.get("char_id", "")
+            card.set_data(char_id, slot.get("combo_id", ""))
         self.update_fixed_team_status()
 
     def on_scan_clicked(self):
@@ -661,12 +702,12 @@ class TeamManagerTab(CustomTab):
         filled_count = 0
         for result in self.last_scan_results:
             idx = result.get("index")
-            match_name = result.get("match")
-            if not (0 <= idx < 4) or not match_name:
+            match_char_id = result.get("match")
+            if not (0 <= idx < 4) or not match_char_id:
                 continue
-            char_info = self.manager.get_character_info(match_name) or {}
-            combo_ref = char_info.get("combo_ref", "")
-            self.fixed_team_slots[idx].set_data(match_name, combo_ref)
+            char_info = self.manager.get_character_info_by_id(match_char_id)
+            combo_id = char_info["combo_id"] if char_info else ""
+            self.fixed_team_slots[idx].set_data(match_char_id, combo_id)
             filled_count += 1
 
         if filled_count == 0:

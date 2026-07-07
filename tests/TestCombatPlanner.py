@@ -144,7 +144,7 @@ class FakeChar:
 
 class PublicApiChar(BaseChar):
     def __init__(self, task, index, name, intents_factory, max_field_time=0):
-        super().__init__(task, index, char_name=name)
+        super().__init__(task, index, char_id=name)
         self.char_name = name
         self._intents_factory = intents_factory
         self._max_field_time = max_field_time

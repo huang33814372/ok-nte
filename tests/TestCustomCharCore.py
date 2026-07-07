@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 from src.char.custom.CustomChar import CustomChar
 from src.char.custom.CustomCharManager import DB_SCHEMA_VERSION, CustomCharManager
 
-PREDEFINED_CHARACTER_REF = "builtin:char_zero"
+PREDEFINED_CHARACTER_ID = "char_zero"
 
 class TestCustomCharCore(unittest.TestCase):
     def setUp(self):
@@ -55,15 +55,19 @@ class TestCustomCharCore(unittest.TestCase):
 
         manager = CustomCharManager()
         self.assertEqual(manager.db["schema_version"], DB_SCHEMA_VERSION)
+        combo_id = manager.find_custom_combo_id_by_name("combo_old")
+        self.assertTrue(combo_id.startswith("combo_"))
         raw = next(iter(manager.db["characters"].values()))
         self.assertEqual(raw["name"], "char_legacy")
-        self.assertEqual(raw["combo_ref"], "combo_old")
+        self.assertEqual(raw["combo_id"], combo_id)
         self.assertNotIn("combo_name", raw)
+        self.assertNotIn("combo_ref", raw)
 
-        info = manager.get_character_info("char_legacy")
+        info = manager.get_character_info_by_id(manager._find_character_id_by_name("char_legacy"))
         self.assertIsNotNone(info)
-        self.assertEqual(info["combo_ref"], "combo_old")
-        self.assertNotIn("combo_name", info)
+        self.assertEqual(info["combo_id"], combo_id)
+        self.assertEqual(info["combo_name"], "combo_old")
+        self.assertNotIn("combo_ref", info)
 
     def test_db_schema_migrates_legacy_builtin_label(self):
         bootstrap = {
@@ -74,7 +78,9 @@ class TestCustomCharCore(unittest.TestCase):
         }
         self._write_db(bootstrap)
         manager = CustomCharManager()
-        legacy_builtin_label = manager.to_combo_label(PREDEFINED_CHARACTER_REF)
+        legacy_builtin_label = (
+            f"{manager.get_builtin_prefix()}{manager.get_combo_name(PREDEFINED_CHARACTER_ID)}"
+        )
 
         legacy = {
             "schema_version": 3,
@@ -91,20 +97,20 @@ class TestCustomCharCore(unittest.TestCase):
         CustomCharManager._instance = None
 
         manager = CustomCharManager()
-        info = manager.get_character_info("char_builtin")
+        info = manager.get_character_info_by_id(manager._find_character_id_by_name("char_builtin"))
         self.assertIsNotNone(info)
-        self.assertEqual(info["combo_ref"], PREDEFINED_CHARACTER_REF)
-        self.assertNotIn("combo_name", info)
+        self.assertEqual(info["combo_id"], PREDEFINED_CHARACTER_ID)
+        self.assertNotIn("combo_ref", info)
 
     def test_db_schema_remaps_custom_combo_key_conflicting_with_builtin(self):
         legacy = {
             "schema_version": 3,
             "combos": {
-                PREDEFINED_CHARACTER_REF: "skill,wait(0.1)"
+                "builtin:char_zero": "skill,wait(0.1)"
             },
             "characters": {
                 "char_conflict": {
-                    "combo_name": PREDEFINED_CHARACTER_REF,
+                    "combo_name": "builtin:char_zero",
                     "feature_ids": [],
                 }
             },
@@ -113,17 +119,17 @@ class TestCustomCharCore(unittest.TestCase):
         self._write_db(legacy)
 
         manager = CustomCharManager()
-        remapped_key = f"{manager.CUSTOM_COMBO_PREFIX}{PREDEFINED_CHARACTER_REF}"
+        remapped_key = manager.find_custom_combo_id_by_name("builtin:char_zero")
 
-        self.assertNotIn(PREDEFINED_CHARACTER_REF, manager.db["combos"])
+        self.assertNotIn("builtin:char_zero", manager.db["combos"])
         self.assertIn(remapped_key, manager.db["combos"])
         self.assertEqual(manager.get_combo(remapped_key), "skill,wait(0.1)")
 
-        info = manager.get_character_info("char_conflict")
+        info = manager.get_character_info_by_id(manager._find_character_id_by_name("char_conflict"))
         self.assertIsNotNone(info)
-        self.assertEqual(info["combo_ref"], remapped_key)
-        self.assertNotIn("combo_name", info)
-        self.assertEqual(manager.get_combo(info["combo_ref"]), "skill,wait(0.1)")
+        self.assertEqual(info["combo_id"], remapped_key)
+        self.assertNotIn("combo_ref", info)
+        self.assertEqual(manager.get_combo(info["combo_id"]), "skill,wait(0.1)")
 
     def test_validate_combo_syntax_reports_line_and_column(self):
         is_valid, error = CustomChar.validate_combo_syntax("skill,wait(0.5)")
@@ -216,7 +222,7 @@ class TestCustomCharCore(unittest.TestCase):
             "combos": {},
             "characters": {
                 "char_a": {
-                    "combo_ref": "",
+                    "combo_id": "",
                     "feature_ids": [existing_fid, missing_fid],
                 }
             },
@@ -229,11 +235,79 @@ class TestCustomCharCore(unittest.TestCase):
 
         manager = CustomCharManager()
 
-        char_info = manager.get_character_info("char_a")
+        char_info = manager.get_character_info_by_id(manager._find_character_id_by_name("char_a"))
         self.assertIsNotNone(char_info)
         self.assertEqual(char_info["feature_ids"], [existing_fid])
         self.assertIn(existing_fid, manager.db["features"])
         self.assertNotIn(missing_fid, manager.db["features"])
+
+    def test_char_name_is_stripped_and_kept_unique(self):
+        manager = CustomCharManager()
+        raw_name = "  custom hero  "
+
+        char_id = manager.create_character(raw_name, "")
+        duplicate_id = manager.create_character("custom hero", "")
+        blank_id = manager.create_character("   ", "")
+
+        names = [c["char_name"] for c in manager.get_all_characters().values()]
+        self.assertIn("custom hero", names)
+        self.assertNotIn(raw_name, names)
+        self.assertEqual(names.count("custom hero"), 1)
+        self.assertEqual(duplicate_id, char_id)
+        self.assertEqual(blank_id, "")
+
+        id_custom = manager._find_character_id_by_name("custom hero")
+
+        self.assertEqual(id_custom, char_id)
+        self.assertEqual(manager.get_character_info_by_id(id_custom)["char_name"], "custom hero")
+        self.assertNotIn("   ", names)
+
+    def test_character_info_by_id_has_expected_shape(self):
+        manager = CustomCharManager()
+        char_id = manager.create_character("fixed shape", "")
+
+        info = manager.get_character_info_by_id(char_id)
+        missing = manager.get_character_info_by_id("missing")
+
+        self.assertEqual(info["char_id"], char_id)
+        self.assertEqual(info["char_name"], "fixed shape")
+        self.assertEqual(info["combo_id"], "")
+        self.assertEqual(info["combo_name"], "")
+        self.assertEqual(info["feature_ids"], [])
+        self.assertNotIn("name", info)
+
+        self.assertIsNone(missing)
+
+    def test_fixed_team_migrates_combo_ref_to_combo_id(self):
+        legacy = {
+            "schema_version": 4,
+            "combos": {},
+            "characters": {
+                "char_001": {"name": "零", "combo_ref": "builtin:char_zero"}
+            },
+            "features": {},
+            "fixed_team": {
+                "enabled": True,
+                "slots": [
+                    {"char_name": "零", "combo_ref": "builtin:char_zero"},
+                ],
+            },
+        }
+        self._write_db(legacy)
+
+        manager = CustomCharManager()
+        fixed_team = manager.get_fixed_team()
+
+        self.assertTrue(fixed_team["enabled"])
+        char_id = ""
+        for cid, cdata in manager.db["characters"].items():
+            if cdata["name"] == "零":
+                char_id = cid
+                break
+        self.assertNotEqual(char_id, "")
+        self.assertEqual(fixed_team["slots"][0]["char_id"], char_id)
+        self.assertEqual(fixed_team["slots"][0]["combo_id"], PREDEFINED_CHARACTER_ID)
+        self.assertNotIn("combo_ref", fixed_team["slots"][0])
 
 
 if __name__ == "__main__":

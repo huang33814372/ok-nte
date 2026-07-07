@@ -45,7 +45,7 @@ class BaseChar:
 
     INTRO_MOTION_FREEZE_DURATION = 1.5
 
-    def __init__(self, task, index, char_name=None, confidence=1):
+    def __init__(self, task, index, char_id="", confidence=1):
         """初始化角色基础属性。
 
         Args:
@@ -54,8 +54,11 @@ class BaseChar:
             char_name (str, optional): 角色名称。默认为 None。
         """
         self.task: "BaseCombatTask" = task
-        self.char_name = char_name
-        self.builtin_key = None
+        self.char_name = "default"
+        self.combo_name = "default"
+        self.char_id = char_id
+        self.combo_id = ""
+        self.builtin = False
         self.index = index
         self.last_switch_time = -1
         self.last_ultimate_time = -1
@@ -69,7 +72,6 @@ class BaseChar:
         self.confidence = confidence
         self.logger = Logger.get_logger(self.name)
         self.cycle_start_time = 0.0
-        self.combo_label = "default"
         self.element = Element.DEFAULT
         self.planner_handles_arc = False
         self.is_dead = False

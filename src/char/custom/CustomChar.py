@@ -28,20 +28,18 @@ class CustomChar(BaseChar):
     它从 CustomCharManager 获取出招表，并作为 planner 动作执行。
     """
 
-    def __init__(self, task, index, char_name=None, confidence=1):
-        super().__init__(task, index, char_name, confidence)
+    def __init__(self, task, index, char_id="", combo_id: str = "", confidence=1):
+        super().__init__(task, index, char_id, confidence)
         self.manager = CustomCharManager()
-        self.combo_label = ""
+        self.combo_id = combo_id
         self.combo_str = ""
         self.parsed_combo = []
         self._load_combo()
 
     def _load_combo(self):
-        char_info = self.manager.get_character_info(self.char_name)
-        if char_info:
-            combo_ref = self.manager.to_combo_ref(char_info.get("combo_ref", ""))
-            self.combo_label = self.manager.to_combo_label(combo_ref)
-            self.combo_str = self.manager.get_combo(combo_ref)
+        if self.combo_id:
+            self.combo_name = self.manager.get_combo_name(self.combo_id)
+            self.combo_str = self.manager.get_combo(self.combo_id)
             self._compile_combo()
         else:
             self.logger.warning(f"No custom char info found for {self.char_name}")

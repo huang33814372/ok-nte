@@ -43,7 +43,7 @@ class DebugCharTask(BaseCombatTask):
     def init_char(self):
         self.current_char = self.config["char"] # type: ignore
         char_class = char_dict.get(self.current_char).get("cls")
-        self.char = char_class(self, 0, char_name=self.current_char, confidence=1) # type: ignore
+        self.char = char_class(self, 0, char_id=self.current_char, confidence=1) # type: ignore
 
     def __getattr__(self, name):
         """

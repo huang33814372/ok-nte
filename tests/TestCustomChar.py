@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 from ok.test.TaskTestCase import TaskTestCase
 
-from src.char.custom.BuiltinComboRegistry import BuiltinComboRegistry
 from src.char.custom.CustomChar import CustomChar
 from src.char.custom.CustomCharManager import CustomCharManager
 from src.config import config
@@ -13,7 +12,7 @@ from src.tasks.trigger.AutoCombatTask import AutoCombatTask
 from src.ui.CharManagerTab import CharManagerTab
 from src.ui.TeamManagerTab import TeamManagerTab
 
-PREDEFINED_CHARACTER_REF = "builtin:char_zero"
+PREDEFINED_CHARACTER_ID = "char_zero"
 
 
 class TestCustomChar(TaskTestCase):
@@ -110,19 +109,21 @@ class TestCustomChar(TaskTestCase):
     def test_manager_crud(self):
         """測試 CustomCharManager 基本存取功能與特徵匹配"""
         # 新增 Combo 控制串
-        self.manager.add_combo("combo_test", "skill, jump")
-        self.assertEqual(self.manager.get_combo("combo_test"), "skill, jump")
+        combo_id = self.manager.add_combo("combo_test", "skill, jump")
+        self.assertTrue(combo_id.startswith("combo_"))
+        self.assertEqual(self.manager.get_combo(combo_id), "skill, jump")
 
         # 新增與連結 Character
-        self.manager.add_character("char1", "combo_test")
+        self.manager.add_character("char1", combo_id)
         self.assertIn("char1", self.manager.get_all_characters())
         char_info = self.manager.get_character_info("char1")
         assert char_info is not None
-        self.assertEqual(char_info["combo_ref"], "combo_test")
+        self.assertEqual(char_info["combo_id"], combo_id)
+        self.assertEqual(char_info["combo_name"], "combo_test")
 
         # 刪除 Combo 檢查
-        self.manager.delete_combo("combo_test")
-        self.assertEqual(self.manager.get_combo("combo_test"), "")
+        self.manager.delete_combo(combo_id)
+        self.assertEqual(self.manager.get_combo(combo_id), "")
 
         # 模擬截圖特徵值的加入
         rng = np.random.default_rng(seed=42)
@@ -144,8 +145,10 @@ class TestCustomChar(TaskTestCase):
 
     def test_combo_compile(self):
         """測試 CustomChar 透過 AST 語法樹將字串解析為獨立指令的容錯與精準度"""
-        self.manager.add_combo("combo_ast", "skill, l_click(), l_hold(1.5), walk(w, 2), wait(0.5)")
-        self.manager.add_character("test_ast_hero", "combo_ast")
+        combo_id = self.manager.add_combo(
+            "combo_ast", "skill, l_click(), l_hold(1.5), walk(w, 2), wait(0.5)"
+        )
+        self.manager.add_character("test_ast_hero", combo_id)
 
         # 初始化 CustomChar
         char = CustomChar(task=self.task, index=0, char_name="test_ast_hero")
@@ -170,8 +173,8 @@ class TestCustomChar(TaskTestCase):
         tab.manager = self.manager
 
         # 準備假資料
-        self.manager.add_combo("combo_ui", "skill, wait(1)")
-        self.manager.add_character("char_ui_1", "combo_ui")
+        combo_id = self.manager.add_combo("combo_ui", "skill, wait(1)")
+        self.manager.add_character("char_ui_1", combo_id)
         self.manager.add_character("char_ui_2", "")
 
         # 測試列表刷新
@@ -193,7 +196,7 @@ class TestCustomChar(TaskTestCase):
         tab.on_unbind_combo()
         char_ui_info = self.manager.get_character_info("char_ui_1")
         assert char_ui_info is not None
-        self.assertEqual(char_ui_info["combo_ref"], "")
+        self.assertEqual(char_ui_info["combo_id"], "")
         # 解綁後，介面會刷新，combo_text 應顯示未綁定的提示文字
         self.assertEqual(tab.combo_text.toPlainText(), tab.tr_unbound_text)
 
@@ -202,8 +205,8 @@ class TestCustomChar(TaskTestCase):
         tab = TeamManagerTab(manager=self.manager)
 
         # 準備假資料
-        self.manager.add_combo("combo_scanner", "skill")
-        self.manager.add_character("scan_char_1", "combo_scanner")
+        combo_id = self.manager.add_combo("combo_scanner", "skill")
+        self.manager.add_character("scan_char_1", combo_id)
 
         # 模擬 on_scan_done 發送了掃描成功結果
         fake_mat = np.zeros((10, 10, 3), dtype=np.uint8)
@@ -235,7 +238,7 @@ class TestCustomChar(TaskTestCase):
 
         dialog = MagicMock()
         dialog.exec.return_value = True
-        dialog.get_data.return_value = ("linked_char", "")
+        dialog.get_data.return_value = ("linked_char", "", "")
 
         with patch("src.ui.TeamManagerTab.NewCharDialog", return_value=dialog):
             slot.on_action()
@@ -246,28 +249,33 @@ class TestCustomChar(TaskTestCase):
         self.assertFalse(slot.btn_act.isEnabled())
 
     def test_builtin_combo_roundtrip(self):
-        builtin_ref = PREDEFINED_CHARACTER_REF
-        builtin_label = self.manager.to_combo_label(builtin_ref)
+        builtin_id = PREDEFINED_CHARACTER_ID
+        builtin_name = self.manager.get_combo_name(builtin_id)
+        builtin_display = f"{self.manager.get_builtin_prefix()}{builtin_name}"
 
-        self.assertTrue(self.manager.is_builtin_combo(builtin_ref))
-        self.assertEqual(self.manager.to_combo_ref(builtin_label), builtin_ref)
+        self.assertTrue(self.manager.is_builtin_combo(builtin_id))
+        self.assertFalse(builtin_name.startswith(self.manager.get_builtin_prefix()))
 
-        self.manager.add_character("char_builtin", builtin_label)
+        self.manager.add_character("char_builtin", builtin_id)
         char_info = self.manager.get_character_info("char_builtin")
         assert char_info is not None
-        self.assertEqual(char_info["combo_ref"], builtin_ref)
+        self.assertEqual(char_info["combo_id"], builtin_id)
+        self.assertEqual(char_info["combo_name"], builtin_name)
 
         combos = self.manager.get_all_combos()
-        self.assertIn(builtin_label, combos)
-        self.assertNotIn(builtin_ref, combos)
+        self.assertIn(builtin_name, combos)
+        self.assertNotIn(builtin_display, combos)
 
-        combo_items = self.manager.get_all_combo_items()
-        self.assertIn((builtin_label, builtin_ref), combo_items)
+        combo_items = self.manager.get_all_combo_items(with_builtin_prefix=True)
+        self.assertIn((builtin_display, builtin_id), combo_items)
 
     def test_migrate_legacy_builtin_combo_name(self):
         import src.char.custom.CustomCharManager as manager_module
 
-        legacy_label = self.manager.to_combo_label(PREDEFINED_CHARACTER_REF)
+        legacy_label = (
+            f"{self.manager.get_builtin_prefix()}"
+            f"{self.manager.get_combo_name(PREDEFINED_CHARACTER_ID)}"
+        )
         with open(manager_module.DB_PATH, "w", encoding="utf-8") as f:
             json.dump(
                 {
@@ -285,37 +293,46 @@ class TestCustomChar(TaskTestCase):
         migrated_manager = CustomCharManager()
         migrated_info = migrated_manager.get_character_info("legacy_char")
         assert migrated_info is not None
-        self.assertEqual(migrated_info["combo_ref"], PREDEFINED_CHARACTER_REF)
+        self.assertEqual(migrated_info["combo_id"], PREDEFINED_CHARACTER_ID)
 
-    def test_char_factory_uses_builtin_ref_without_ui_import(self):
+    def test_char_factory_uses_builtin_id_without_ui_import(self):
         from src.char.CharFactory import _build_char_instance
         from src.char.Zero import Zero
 
-        self.manager.add_character("builtin_char", PREDEFINED_CHARACTER_REF)
+        self.manager.add_character("builtin_char", PREDEFINED_CHARACTER_ID)
         instance = _build_char_instance(self.task, 0, "builtin_char", 0.95, self.manager)
         self.assertIsInstance(instance, Zero)
+        self.assertEqual(instance.char_name, "builtin_char")
+        self.assertEqual(instance.combo_name, self.manager.get_combo_name(PREDEFINED_CHARACTER_ID))
+        self.assertTrue(instance.builtin)
 
-    def test_builtin_label_disambiguates_duplicate_cn_name(self):
+    def test_builtin_combo_name_stays_clean_and_ui_prefix_is_display_only(self):
+        class FakeA:
+            pass
+
+        class FakeB:
+            pass
+
+        class FakeC:
+            pass
+
         fake_entries = {
-            "char_a": {"cn_name": "重名"},
-            "char_b": {"cn_name": "重名"},
-            "char_c": {"cn_name": "唯一名"},
+            "char_a": {"cls": FakeA, "cn_name": "重名"},
+            "char_b": {"cls": FakeB, "cn_name": "重名"},
+            "char_c": {"cls": FakeC, "cn_name": "唯一名"},
         }
 
         with (
-            patch.object(BuiltinComboRegistry, "_get_builtin_entries", return_value=fake_entries),
-            patch.object(BuiltinComboRegistry, "_legacy_prefix", return_value="[内置代码] "),
-            patch.object(BuiltinComboRegistry, "_locale_name", return_value="zh_CN"),
+            patch.object(CustomCharManager, "_builtin_entries", return_value=fake_entries),
+            patch.object(CustomCharManager, "_locale_name", return_value="zh_CN"),
         ):
-            label_a = BuiltinComboRegistry.to_label("builtin:char_a")
-            label_b = BuiltinComboRegistry.to_label("builtin:char_b")
-            label_c = BuiltinComboRegistry.to_label("builtin:char_c")
-
-            self.assertEqual(label_a, "[内置代码] 重名 (char_a)")
-            self.assertEqual(label_b, "[内置代码] 重名 (char_b)")
-            self.assertEqual(label_c, "[内置代码] 唯一名")
-            self.assertEqual(BuiltinComboRegistry.to_ref(label_a), "builtin:char_a")
-            self.assertEqual(BuiltinComboRegistry.to_ref(label_b), "builtin:char_b")
+            self.assertEqual(self.manager.get_combo_name("char_a"), "重名")
+            self.assertEqual(self.manager.get_combo_name("char_b"), "重名")
+            self.assertEqual(self.manager.get_combo_name("char_c"), "唯一名")
+            self.assertEqual(
+                self.manager.get_combo_name("char_c", with_builtin_prefix=True),
+                "[内置代码] 唯一名",
+            )
 
 
 if __name__ == "__main__":

@@ -63,7 +63,6 @@ def get_builtin_prefix():
     return CustomCharManager.get_builtin_prefix()
 
 
-
 class CharManagerTab(CustomTab):
     doc_translation_ready = Signal(str, str)
 
@@ -115,7 +114,7 @@ class CharManagerTab(CustomTab):
         self._doc_cache = None
         self._pending_command = ""
         self._doc_translation_pending_locales = set()
-        self._all_characters = []
+        self._all_characters = {}
         self.doc_translation_ready.connect(
             self._on_doc_translation_ready, Qt.ConnectionType.QueuedConnection
         )
@@ -292,7 +291,8 @@ class CharManagerTab(CustomTab):
         self.main_h_layout.addWidget(self.left_widget, 1)
         self.main_h_layout.addWidget(self.detail_widget, 4)
 
-        self.current_char = None
+        self.current_char_id = None
+        self.current_char_name = None
         self.refresh_list()
 
     def eventFilter(self, watched, event: QEvent):
@@ -315,13 +315,19 @@ class CharManagerTab(CustomTab):
 
     def refresh_list(self):
         select = self.char_list_widget.currentItem()
-        select_text = select.text() if select else None
-        self.current_char = None
-        self._all_characters = list(self.manager.get_all_characters().keys())
+        select_id = select.data(Qt.ItemDataRole.UserRole) if select else None
+        self.current_char_id = None
+        self.current_char_name = None
+        self._all_characters = self.manager.get_all_characters()
         self.char_list_widget.setUpdatesEnabled(False)
         self.char_list_widget.clear()
-        for name in self._all_characters:
-            self.char_list_widget.addItem(name)
+        for char_id, char_data in self._all_characters.items():
+            from PySide6.QtWidgets import QListWidgetItem
+
+            item = QListWidgetItem(char_data["char_name"])
+            item.setData(Qt.ItemDataRole.UserRole, char_id)
+            self.char_list_widget.addItem(item)
+        self.char_list_widget.reapply_filter()
         self.char_list_widget.setUpdatesEnabled(True)
 
         # Test Code: Add dummy items
@@ -348,9 +354,12 @@ class CharManagerTab(CustomTab):
             if layout_item:
                 layout_item.deleteLater()
 
-        items = self.char_list_widget.findItems(select_text or "", Qt.MatchFlag.MatchExactly)
-        if items:
-            self.char_list_widget.setCurrentItem(items[0])
+        if select_id:
+            for i in range(self.char_list_widget.count()):
+                item = self.char_list_widget.item(i)
+                if item.data(Qt.ItemDataRole.UserRole) == select_id and not item.isHidden():
+                    self.char_list_widget.setCurrentItem(item)
+                    break
         else:
             self.char_list_widget.setCurrentItem(None)
 
@@ -472,25 +481,27 @@ class CharManagerTab(CustomTab):
 
     def on_char_selected(self, item):
         if not item:
-            self.current_char = None
+            self.current_char_id = None
+            self.current_char_name = None
             self.char_title.setText(self.tr_choose_char)
             self.char_title.setWordWrap(True)
             self.title_spacer.changeSize(0, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
             self.title_h_layout.invalidate()
             self.char_name_edit_btn.hide()
             return
-        self.current_char = item.text()
+        self.current_char_id = item.data(Qt.ItemDataRole.UserRole)
+        self.current_char_name = item.text()
         self._render_right_panel()
 
     def _reload_combo_options(self):
         self.combo_select.blockSignals(True)
         self.combo_select.clear()
-        for label, combo_ref in self.manager.get_all_combo_items():
-            self.combo_select.addItem(label, userData=combo_ref)
+        for combo_name, combo_id in self.manager.get_all_combo_items(with_builtin_prefix=True):
+            self.combo_select.addItem(combo_name, userData=combo_id)
         self.combo_select.setCurrentIndex(-1)
         self.combo_select.blockSignals(False)
 
-    def _resolve_combo_ref(self, text: str | None = None) -> str:
+    def _resolve_combo_id(self, text: str | None = None) -> str:
         if text is None:
             text = self.combo_select.currentText()
         text = text.strip()
@@ -500,37 +511,37 @@ class CharManagerTab(CustomTab):
             data = self.combo_select.itemData(idx)
             if isinstance(data, str) and data:
                 return data
-        return self.manager.to_combo_ref(text)
+        return ""
 
-    def _set_combo_selection_by_ref(self, combo_ref: str):
-        combo_label = self.manager.to_combo_label(combo_ref)
+    def _set_combo_selection_by_id(self, combo_id: str):
+        combo_name = self.manager.get_combo_name(combo_id, with_builtin_prefix=True)
         self.combo_select.blockSignals(True)
-        idx = self.combo_select.findData(combo_ref)
+        idx = self.combo_select.findData(combo_id)
         if idx >= 0:
             self.combo_select.setCurrentIndex(idx)
         else:
-            self.combo_select.setCurrentText(combo_label)
+            self.combo_select.setCurrentText(combo_name)
         self.combo_select.blockSignals(False)
 
     def _render_right_panel(self):
-        if not self.current_char:
+        if not self.current_char_id:
             return
-        char_info = self.manager.get_character_info(self.current_char)
+        char_info = self.manager.get_character_info_by_id(self.current_char_id)
         if not char_info:
             return
 
         self.delete_char_btn.setEnabled(True)
-        self.char_title.setText(self.current_char)
+        self.char_title.setText(self.current_char_name)
         self.char_title.setWordWrap(False)
         self.title_spacer.changeSize(0, 0, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self.title_h_layout.invalidate()
         self.char_name_edit_btn.show()
-        combo_ref = char_info.get("combo_ref", "")
-        combo_label = self.manager.to_combo_label(combo_ref)
-        self._set_combo_selection_by_ref(combo_ref)
+        combo_id = char_info["combo_id"]
+        combo_name = self.manager.get_combo_name(combo_id, with_builtin_prefix=True)
+        self._set_combo_selection_by_id(combo_id)
 
         # Manually trigger the text change logic to ensure built-in warnings render
-        self.on_combo_changed(combo_label)
+        self.on_combo_changed(combo_name)
 
         # update feature grid
         while self.feature_grid.count() > 0:
@@ -538,7 +549,7 @@ class CharManagerTab(CustomTab):
             if item:
                 item.deleteLater()
 
-        feature_ids = char_info.get("feature_ids", [])
+        feature_ids = char_info["feature_ids"]
         for fid in feature_ids:
             img_mat, _, _ = self.manager.load_feature_image(fid)
             if img_mat is not None:
@@ -555,12 +566,12 @@ class CharManagerTab(CustomTab):
         QTimer.singleShot(0, self._update_feature_widget_height)
 
     def on_delete_feature(self, fid):
-        if self.current_char:
-            self.manager.remove_feature_from_character(self.current_char, fid)
+        if self.current_char_id:
+            self.manager.remove_feature_from_character(self.current_char_id, fid)
             self._render_right_panel()
 
-    def on_combo_changed(self, combo_label, combo_ref=None):
-        if combo_label == "":
+    def on_combo_changed(self, combo_name, combo_id=None):
+        if combo_name == "":
             self.combo_text.setText(self.tr_unbound_text)
             self.combo_text.setReadOnly(True)
             self.combo_text.setEnabled(False)
@@ -568,21 +579,21 @@ class CharManagerTab(CustomTab):
             self.combo_unbind_btn.setEnabled(False)
             self.combo_delete_btn.setEnabled(False)
             self.combo_test_btn.setEnabled(False)
-            self.combo_select.setText(combo_label)
+            self.combo_select.setText(combo_name)
             self.combo_select.setReadOnly(False)
             self.combo_select.setCurrentIndex(-1)
             return
 
-        if combo_ref is None:
-            combo_ref = self._resolve_combo_ref(combo_label)
+        if combo_id is None:
+            combo_id = self._resolve_combo_id(combo_name)
 
-        is_builtin = self.manager.is_builtin_combo(combo_ref)
+        is_builtin = self.manager.is_builtin_combo(combo_id)
         if is_builtin:
             self.combo_text.setText(self.tr_builtin_text)
             self.combo_text.setReadOnly(True)
             self.combo_text.setEnabled(False)
-            self.combo_save_btn.setEnabled(self.current_char is not None)
-            self.combo_unbind_btn.setEnabled(self.current_char is not None)
+            self.combo_save_btn.setEnabled(self.current_char_id is not None)
+            self.combo_unbind_btn.setEnabled(self.current_char_id is not None)
             self.combo_delete_btn.setEnabled(False)  # Built-ins cannot be deleted
             self.combo_test_btn.setEnabled(getattr(og.app, "debug", False))
             self.combo_select.setReadOnly(False)
@@ -591,12 +602,12 @@ class CharManagerTab(CustomTab):
         self.combo_text.setReadOnly(False)
         self.combo_text.setEnabled(True)
         self.combo_save_btn.setEnabled(True)
-        self.combo_unbind_btn.setEnabled(self.current_char is not None)
+        self.combo_unbind_btn.setEnabled(self.current_char_id is not None)
         self.combo_delete_btn.setEnabled(True)
         self.combo_select.setReadOnly(False)
 
         # If the combo matches an existing one, update the text area to show its content
-        combo_content = self.manager.get_combo(combo_ref)
+        combo_content = self.manager.get_combo(combo_id)
         if combo_content:
             self.combo_text.setText(combo_content)
         else:
@@ -607,8 +618,8 @@ class CharManagerTab(CustomTab):
 
     def on_test_combo(self):
         combo_input = self.combo_select.currentText().strip()
-        combo_ref = self._resolve_combo_ref(combo_input)
-        is_builtin = self.manager.is_builtin_combo(combo_ref)
+        combo_id = self._resolve_combo_id(combo_input)
+        is_builtin = self.manager.is_builtin_combo(combo_id)
 
         if not is_builtin:
             combo_content = self.combo_text.toPlainText().strip()
@@ -632,7 +643,7 @@ class CharManagerTab(CustomTab):
 
     def _run_combo_test(self):
         og.app.start_controller.do_start()
-        from src.char.CharFactory import get_char_by_name
+        from src.char.CharFactory import get_char_by_id
         from src.char.custom.CustomChar import CustomChar
         from src.tasks.trigger.AutoCombatTask import AutoCombatTask
 
@@ -641,10 +652,13 @@ class CharManagerTab(CustomTab):
             return
 
         combo_input = self.combo_select.currentText().strip()
-        combo_ref = self._resolve_combo_ref(combo_input)
-        test_char = get_char_by_name(
-            task, index=0, char_name=self.current_char or "TEST_CHAR", combo_ref=combo_ref
-        )
+        combo_id = self._resolve_combo_id(combo_input)
+        if combo_id:
+            test_char = get_char_by_id(
+                task, index=0, char_id=self.current_char_id, combo_id=combo_id
+            )
+        else:
+            test_char = CustomChar(task, index=0, char_id=self.current_char_id)
 
         if not hasattr(task, "_ocr_lock"):
             task._ocr_lock = threading.Lock()
@@ -682,15 +696,17 @@ class CharManagerTab(CustomTab):
     def on_save_combo(self):
         combo_input = self.combo_select.currentText().strip()
         combo_content = self.combo_text.toPlainText().strip()
-        combo_ref = self._resolve_combo_ref(combo_input)
-        combo_label = self.manager.to_combo_label(combo_ref)
+        combo_id = self._resolve_combo_id(combo_input)
+        combo_name = self.manager.get_combo_name(combo_id, with_builtin_prefix=True)
+        if not combo_name:
+            combo_name = combo_input
 
-        is_builtin = self.manager.is_builtin_combo(combo_ref)
+        is_builtin = self.manager.is_builtin_combo(combo_id)
 
-        if is_builtin and not self.current_char:
+        if is_builtin and not self.current_char_id:
             return
 
-        if combo_ref:
+        if combo_input:
             if not is_builtin:
                 from src.char.custom.CustomChar import CustomChar
 
@@ -706,18 +722,23 @@ class CharManagerTab(CustomTab):
                         parent=self.window(),
                     )
                     return
-                self.manager.add_combo(combo_ref, combo_content)
+                if combo_id:
+                    self.manager.update_combo(combo_id, combo_content)
+                else:
+                    combo_id = self.manager.add_combo(combo_input, combo_content)
 
-            if self.current_char:
-                self.manager.add_character(self.current_char, combo_ref)
+            if self.current_char_id:
+                self.manager.update_character(
+                    self.current_char_id, self.current_char_name, combo_id
+                )
 
             # update combo dropdown
             self._reload_combo_options()
-            self._set_combo_selection_by_ref(combo_ref)
+            self._set_combo_selection_by_id(combo_id)
 
             InfoBar.success(
                 title=self.tr_save_success,
-                content=self.tr_combo_msg.format(combo_label),
+                content=self.tr_combo_msg.format(combo_name),
                 orient=Qt.Orientation.Horizontal,
                 isClosable=True,
                 position=InfoBarPosition.TOP,
@@ -727,20 +748,22 @@ class CharManagerTab(CustomTab):
             char_manager_signals.refresh_tab.emit()
 
     def on_delete_char(self):
-        if not self.current_char:
+        if not self.current_char_id:
             return
 
-        char_to_delete = self.current_char
+        char_to_delete = self.current_char_id
+        char_name_to_delete = self.current_char_name
         self.manager.delete_character(char_to_delete)
 
         # Reset current selection and refresh UI
-        self.current_char = None
+        self.current_char_id = None
+        self.current_char_name = None
         self.delete_char_btn.setEnabled(False)
         self.refresh_list()
 
         InfoBar.success(
             title=self.tr_del_success,
-            content=self.tr_del_char_msg.format(char_to_delete),
+            content=self.tr_del_char_msg.format(char_name_to_delete),
             orient=Qt.Orientation.Horizontal,
             isClosable=True,
             position=InfoBarPosition.TOP,
@@ -769,19 +792,18 @@ class CharManagerTab(CustomTab):
         return old_name, False
 
     def on_edit_char_name(self):
-        if not self.current_char:
+        if not self.current_char_id:
             return
 
-        old_name = self.current_char
+        old_name = self.current_char_name
         new_name, ok = self._show_edit_dialog(old_name)
         if not ok:
             return
 
-        new_name = new_name.strip()
-        if not new_name or new_name == old_name:
+        if not new_name.strip() or new_name == old_name:
             return
 
-        if not self.manager.rename_character(old_name, new_name):
+        if not self.manager.update_character(self.current_char_id, char_name=new_name):
             InfoBar.error(
                 title=self.tr_rename_failed_title,
                 content=self.tr_rename_failed,
@@ -810,17 +832,17 @@ class CharManagerTab(CustomTab):
         char_manager_signals.refresh_tab.emit()
 
     def on_unbind_combo(self):
-        if not self.current_char:
+        if not self.current_char_id:
             return
 
-        self.manager.add_character(self.current_char, "")
+        self.manager.update_character(self.current_char_id, combo_id="")
 
         # 刷新列表和右侧界面
         self._render_right_panel()
 
         InfoBar.success(
             title=self.tr_unbind_success,
-            content=self.tr_unbind_msg.format(self.current_char),
+            content=self.tr_unbind_msg.format(self.current_char_name),
             orient=Qt.Orientation.Horizontal,
             isClosable=True,
             position=InfoBarPosition.TOP,
@@ -830,30 +852,30 @@ class CharManagerTab(CustomTab):
         char_manager_signals.refresh_tab.emit()
 
     def on_delete_combo(self):
-        combo_label = self.combo_select.currentText().strip()
-        combo_ref = self._resolve_combo_ref(combo_label)
-        if not combo_ref or self.manager.is_builtin_combo(combo_ref):
+        combo_name = self.combo_select.currentText().strip()
+        combo_id = self._resolve_combo_id(combo_name)
+        if not combo_id or self.manager.is_builtin_combo(combo_id):
             return
 
-        self.manager.delete_combo(combo_ref)
+        self.manager.delete_combo(combo_id)
 
         # 解绑所有正在使用该出招表的角色
-        for c_name, c_data in self.manager.get_all_characters().items():
-            if self.manager.to_combo_ref(c_data.get("combo_ref", "")) == combo_ref:
-                self.manager.add_character(c_name, "")
+        for c_id, c_data in self.manager.get_all_characters().items():
+            if c_data.get("combo_id", "") == combo_id:
+                self.manager.update_character(c_id, combo_id="")
 
         # 刷新出招表下拉列表
         self._reload_combo_options()
 
         # 刷新当前角色的内容显示
-        if self.current_char:
+        if self.current_char_id:
             self._render_right_panel()
         else:
             self.on_combo_changed("")
 
         InfoBar.success(
             title=self.tr_del_success,
-            content=self.tr_del_combo_msg.format(self.manager.to_combo_label(combo_ref)),
+            content=self.tr_del_combo_msg.format(combo_name),
             orient=Qt.Orientation.Horizontal,
             isClosable=True,
             position=InfoBarPosition.TOP,

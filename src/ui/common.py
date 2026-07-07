@@ -156,6 +156,9 @@ class SearchableListWidget(QWidget):
             should_hide = normalized not in item.text().lower()
             item.setHidden(should_hide)
 
+    def reapply_filter(self):
+        self._apply_filter(self.search_edit.text())
+
     def __getattr__(self, name):
         if hasattr(self.list_widget, name):
             return getattr(self.list_widget, name)

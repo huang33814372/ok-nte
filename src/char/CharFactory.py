@@ -42,45 +42,47 @@ char_names = char_dict.keys()
 def _build_char_instance(
     task,
     index,
-    match_name,
+    match_id,
     sim,
     manager: "CustomCharManager",
-    combo_ref_override: str | None = None,
+    combo_id_override: str | None = None,
 ):
     from src.char.custom.CustomChar import CustomChar
 
-    char_info = manager.get_character_info(match_name)
-    if combo_ref_override is None:
-        combo_ref = manager.to_combo_ref(char_info.get("combo_ref", "")) if char_info else ""
+    char_info = manager.get_character_info_by_id(match_id)
+    match_name = char_info["char_name"] if char_info else "unknown"
+
+    if combo_id_override is None:
+        combo_id = char_info["combo_id"] if char_info else ""
     else:
-        combo_ref = manager.to_combo_ref(combo_ref_override)
+        combo_id = combo_id_override
 
-    if not combo_ref:
-        return BaseChar(task, index, char_name=match_name, confidence=sim)
+    if not combo_id:
+        char_id = char_info["char_id"] if char_info else "unknown"
+        return BaseChar(task, index, char_id=char_id, confidence=sim)
 
-    builtin_key = manager.get_builtin_key(combo_ref)
-    if builtin_key and builtin_key in char_dict:
-        cls: "BaseChar" = char_dict[builtin_key].get("cls", BaseChar)
-        instance: "BaseChar" = cls(task, index, char_name=match_name, confidence=sim)
-        instance.builtin_key = builtin_key
-        instance.combo_label = manager.to_combo_label(combo_ref)
-        instance.element = char_dict[builtin_key].get("element", Element.DEFAULT)
+    if manager.is_builtin_combo(combo_id) and combo_id in char_dict:
+        cls = char_dict[combo_id].get("cls", BaseChar)
+        instance: "BaseChar" = cls(task, index, char_id=match_id, confidence=sim)
+        instance.char_name = match_name
+        instance.combo_name = manager.get_combo_name(combo_id, with_builtin_prefix=True)
+        instance.builtin = True
+        instance.element = char_dict[combo_id].get("element", Element.DEFAULT)
         return instance
 
-    # Otherwise return default parsed CustomChar
-    return CustomChar(task, index, char_name=match_name, confidence=sim)
+    return CustomChar(task, index, char_id=match_id, combo_id=combo_id, confidence=sim)
 
 
-def get_char_by_name(
-    task: "BaseCombatTask", index: int, char_name: str, confidence=1, combo_ref: str | None = None
+def get_char_by_id(
+    task: "BaseCombatTask", index: int, char_id: str, confidence=1, combo_id: str | None = None
 ):
     from src.char.custom.CustomCharManager import CustomCharManager
 
     manager = CustomCharManager()
-    if not char_name:
-        return BaseChar(task, index, char_name="unknown", confidence=confidence)
+    if not char_id:
+        return BaseChar(task, index, char_id="unknown", confidence=confidence)
     return _build_char_instance(
-        task, index, char_name, confidence, manager, combo_ref_override=combo_ref
+        task, index, char_id, confidence, manager, combo_id_override=combo_id
     )
 
 
@@ -92,20 +94,20 @@ def get_char_by_pos(task: "BaseCombatTask", box: "Box", index: int, old_char: Ba
     cropped = box.crop_frame(task.frame)
     # Fast path check: if we already have an old_char, specifically test its matching only
     if old_char and old_char.confidence > 0.8:
-        is_match, match_name, sim = manager.match_feature(
-            task, cropped, target_char=old_char.char_name
+        is_match, match_id, sim = manager.match_feature(
+            task, cropped, target_char=old_char.char_id
         )
-        if is_match and match_name == old_char.char_name:
-            return _build_char_instance(task, index, match_name, sim, manager)
+        if is_match and match_id == old_char.char_id:
+            return _build_char_instance(task, index, match_id, sim, manager)
 
     # Perform Full DB Scan using the memory-cached match_feature
-    is_match, match_name, sim = manager.match_feature(task, cropped)
+    is_match, match_id, sim = manager.match_feature(task, cropped)
 
-    if is_match and match_name:
-        return _build_char_instance(task, index, match_name, sim, manager)
+    if is_match and match_id:
+        return _build_char_instance(task, index, match_id, sim, manager)
 
     task.log_info(f"No match found for char {index + 1} set as default char")
-    return BaseChar(task, index, char_name="unknown")
+    return BaseChar(task, index, char_id="unknown")
 
 
 def get_char_feature_by_pos(

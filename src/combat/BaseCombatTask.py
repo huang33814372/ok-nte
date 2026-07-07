@@ -9,7 +9,7 @@ from ok import Box, Logger, safe_get
 
 from src import text_white_color
 from src.char.BaseChar import BaseChar, Element
-from src.char.CharFactory import get_char_by_name, get_char_by_pos
+from src.char.CharFactory import get_char_by_id, get_char_by_pos
 from src.char.custom.CustomCharManager import CustomCharManager
 from src.char.Healer import Healer
 from src.combat.CombatCheck import CombatCheck
@@ -366,12 +366,9 @@ class BaseCombatTask(CharElementUIMixin, CombatCheck):
         self.wait_in_team_and_world(time_out=10, raise_if_not_found=False)
 
     def _get_char_log_name(self, char: "BaseChar"):
-        from src.char.custom.CustomChar import CustomChar
-
-        if type(char) in (BaseChar, CustomChar):
+        if hasattr(char, "char_name"):
             return char.char_name
-        else:
-            return char.name
+        return getattr(char, "name", "None")
 
     def _decide_switch_to(
         self,
@@ -817,19 +814,25 @@ class BaseCombatTask(CharElementUIMixin, CombatCheck):
 
     def _do_load_char(self, index: int, fixed_slots) -> "BaseChar":
         fixed_slot = safe_get(fixed_slots, index)
-        fixed_char_name = ""
-        fixed_combo_ref = ""
+        fixed_char_id = ""
+        fixed_combo_id = ""
         if isinstance(fixed_slot, dict):
-            fixed_char_name = str(fixed_slot.get("char_name", "") or "").strip()
-            fixed_combo_ref = str(fixed_slot.get("combo_ref", "") or "").strip()
-
-        if fixed_char_name:
-            self.log_debug(
-                f"load_chars use fixed slot {index + 1}: {fixed_char_name} {fixed_combo_ref}"
-            )
-            return get_char_by_name(
-                self, index, fixed_char_name, confidence=1, combo_ref=fixed_combo_ref
-            )
+            fixed_char_id = fixed_slot.get("char_id", "")
+            fixed_combo_id = fixed_slot.get("combo_id", "")
+            if fixed_char_id:
+                char_info = CustomCharManager().get_character_info_by_id(fixed_char_id)
+                if not char_info:
+                    self.logger.warning(f"Fixed char {index} not found: {fixed_char_id}")
+                    fixed_char_id = ""
+                    fixed_combo_id = ""
+                else:
+                    fixed_char_name = char_info["char_name"]
+                    self.logger.info(
+                        f"Using fixed char {index}: {fixed_char_name} {fixed_combo_id}"
+                    )
+                    return get_char_by_id(
+                        self, index, fixed_char_id, confidence=1, combo_id=fixed_combo_id
+                    )
 
         box_scaled = self.get_char_box(index).scale(1.1, 1.1)
 
@@ -885,7 +888,7 @@ class BaseCombatTask(CharElementUIMixin, CombatCheck):
                 conf = char.confidence
                 elem = char.element
                 self.log_info(f"load char success {char} {name} {conf:.2f} {elem}")
-                self.info_add_to_list("chars", f"{char.char_name}: {char.combo_label}")
+                self.info_add_to_list("chars", f"{char.char_name}: {char.combo_name}")
 
         if self.team_size > 0:
             self.combat_start = time.time()
