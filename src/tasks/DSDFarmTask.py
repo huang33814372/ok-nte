@@ -219,6 +219,9 @@ class DSDFarmTask(NTEOneTimeTask, BaseCombatTask):
             self.sleep(0.5)
 
     def deside_combat_action(self):
+        def action(*args, **kwargs):
+            self.click()
+            self.sleep(0.1)
         try:
             dont_switch = self.config.get(self.CONF_DONT_SWITCH, False)
             max_combat_time = self.config.get(self.CONF_MAX_COMBAT_TIME, 1200)
@@ -227,8 +230,8 @@ class DSDFarmTask(NTEOneTimeTask, BaseCombatTask):
                 old_switch = self.switch_next_char
                 old_switch_start = self.switch_to_combat_start_char
                 old_switch_other = self.switch_other_char
-                self.switch_next_char = lambda *args, **kwargs: self.click(interval=0.1)
-                self.switch_to_combat_start_char = lambda *args, **kwargs: self.click(interval=0.1)
+                self.switch_next_char = action
+                self.switch_to_combat_start_char = action
                 self.switch_other_char =  lambda *args, **kwargs: True
 
             return self.combat_once(max_combat_time=max_combat_time)
