@@ -1,16 +1,7 @@
-Get-ChildItem -Path ".\tests\*.py" | ForEach-Object {
-  Write-Host "Running tests in $($_.FullName)"
-  try {
-      # Run the Python unittest command
-      python -m unittest $_.FullName
+$py = if (Test-Path .\.venv\Scripts\python.exe) { ".\.venv\Scripts\python.exe" } else { "python" }
 
-      # Check if the previous command succeeded
-      if ($LASTEXITCODE -ne 0) {
-          throw "Tests failed in $($_.FullName)"
-      }
-  } catch {
-      # Stop the loop and return the error
-      Write-Error $_
-      exit 1
-  }
+& $py -m unittest discover -s tests -p "*test*.py" -v
+
+if ($LASTEXITCODE -ne 0) {
+    throw "Tests failed"
 }

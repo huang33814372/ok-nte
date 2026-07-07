@@ -62,22 +62,7 @@ jobs:
 
       - name: Run tests
         run: |
-          Get-ChildItem -Path ".\tests\*.py" | ForEach-Object {
-              Write-Host "Running tests in $($_.FullName)"
-              try {
-                  # Run the Python unittest command
-                  python -m unittest $_.FullName
-
-                  # Check if the previous command succeeded
-                  if ($LASTEXITCODE -ne 0) {
-                      throw "Tests failed in $($_.FullName)"
-                  }
-              } catch {
-                  # Stop the loop and return the error
-                  Write-Error $_
-                  exit 1
-              }
-          }
+          python -m unittest discover -s tests -p "*test*.py" -v
 
       - name: Sync Repositories # 同步部分代码(deploy.txt中), 合并tag中间更新日志, 到更新库, 以减少用户更新使用的git库大小
         id: sync   # Give the step an ID to access its outputs
