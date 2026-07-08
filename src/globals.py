@@ -195,7 +195,6 @@ class Globals(QObject):
                 box=box,
                 threshold=threshold,
                 label="target",
-                force=force,
                 mask_regions=mask_regions,
             )
         # latency = self.openvino_latency_async if ret is not None else -1

@@ -188,7 +188,7 @@ config = {
         ["src.tasks.RhythmTask", "RhythmTask"],
         ["src.tasks.OwnerSelectionTask", "OwnerSelectionTask"],
         ["src.tasks.AutoHeistTask", "AutoHeistTask"],
-        ["src.tasks.DarkTask", "DarkTask"],
+        # ["src.tasks.DarkTask", "DarkTask"],
         ["src.tasks.BagelAITools", "BagelAITools"],
         ["src.tasks.WhirlwindTask", "WhirlwindTask"],
         ["src.tasks.DSDFarmTask", "DSDFarmTask"],
