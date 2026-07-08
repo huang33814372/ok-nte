@@ -65,7 +65,6 @@ class CombatDetectState:
 
 
 class CombatCheck(BaseNTETask):
-    # TARGET_MATCH_SCALES = (0.6, 0.7, 0.8, 0.9, 1.0)
     _LV_NORM_SIZE = 32
     _TARGET_MASK_REGIONS = [(0.020, 0.017, 0.145, 0.240)]
 
@@ -155,25 +154,26 @@ class CombatCheck(BaseNTETask):
     def target_enemy(self, wait=True, lv=True, turn=False):
         if not wait:
             self.middle_click()
-        else:
-            time_out = self.target_enemy_time_out
-            if turn:
-                # 引入了转向，需要额外增加耗时，原本的时间不足以完成
-                time_out += 2.5
-            logger.info(f"targeting enemy for {time_out}s")
-            deadline = time.time() + time_out
-            while time.time() < deadline:
-                if self.is_in_team():
-                    if turn:
-                        self.send_key("a", down_time=0.1)
-                        self.middle_click()
-                        self.sleep(0.7)
-                    else:
-                        self.middle_click()
-                        self.sleep(0.4)
-                    if self.combat_detect(lv=lv):
-                        return True
-                self.next_frame()
+            return
+
+        time_out = self.target_enemy_time_out
+        if turn:
+            # 引入了转向，需要额外增加耗时，原本的时间不足以完成
+            time_out += 2.5
+        logger.info(f"targeting enemy for {time_out}s")
+        deadline = time.time() + time_out
+        while time.time() < deadline:
+            if self.is_in_team():
+                if self.combat_detect(lv=lv):
+                    return True
+                if turn:
+                    self.send_key("a", down_time=0.1)
+                    self.middle_click()
+                    self.sleep(0.7)
+                else:
+                    self.middle_click()
+                    self.sleep(0.4)
+            self.next_frame()
 
     def has_health_bar(self):
         if self._find_red_health_bar():  # or self._find_boss_health_bar():
@@ -223,9 +223,9 @@ class CombatCheck(BaseNTETask):
             return True
         return False
 
-    def in_combat(self, target=False):
+    def in_combat(self):
         try:
-            return self.do_check_in_combat(target)
+            return self.do_check_in_combat()
         except TaskDisabledException:
             raise
         except Exception as e:
@@ -301,13 +301,13 @@ class CombatCheck(BaseNTETask):
         self._log_combat_detect_hit(source)
         return self.scene.set_in_combat()
 
-    def do_check_in_combat(self, target):
+    def do_check_in_combat(self):
         if self.in_animation:
             self._log_combat_detect_hit("in_animation")
             return True
         if self._in_combat:
             return self._check_active_combat()
-        return self._try_enter_combat(target)
+        return self._try_enter_combat()
 
     def _check_active_combat(self):
         if self.scene.in_combat() is not None:
@@ -354,7 +354,7 @@ class CombatCheck(BaseNTETask):
         logger.error("target_enemy failed, try recheck break out of combat")
         return self.reset_to_false(reason="target enemy failed")
 
-    def _try_enter_combat(self, target):
+    def _try_enter_combat(self):
         from src.tasks.trigger.AutoCombatTask import AutoCombatTask
 
         @cache
@@ -374,19 +374,17 @@ class CombatCheck(BaseNTETask):
             return self.is_boss()
 
         is_auto = self.config.get("自动目标") or not isinstance(self, AutoCombatTask)
-        if target and not has_target():
-            self.log_debug("try target")
-            self.middle_click(after_sleep=0.1)
-
         has_combat_signal = is_boss() or has_lv() or has_health_bar()
         has_target_signal = is_auto or has_target()
+
         if not (has_combat_signal and has_target_signal):
             return None
 
         if is_boss():
             self.middle_click()
-        elif not has_target() and not self.target_enemy(wait=True, lv=False):
+        elif not self.target_enemy(wait=True, lv=False):
             return False
+
         self._in_combat = self.load_chars()
         return self._in_combat
 
@@ -410,75 +408,80 @@ class CombatCheck(BaseNTETask):
             mask_regions=self._TARGET_MASK_REGIONS,
         )
 
-        if result is None:
-            return None
+        if not result:
+            return result
 
-        if result:
-            max_conf = max(result, key=lambda x: x.confidence)
-            if max_conf.confidence > 0.8:
-                return max_conf
+        max_conf = max(result, key=lambda x: x.confidence)
+        if max_conf.confidence > 0.8:
+            return max_conf
+
+        detect_frame = self.get_last_openvino_image()
+        if detect_frame is None:
+            return result
 
         target = False
         for box in result:
-            if isinstance(box, Box):
-                detect_frame = self.get_last_openvino_image()
-                if detect_frame is None:
-                    return result
+            if not isinstance(box, Box):
+                continue
 
-                cropped = box.crop_frame(detect_frame)
-                # 使用自适应亮度二值化提取可能的亮色 UI 标记
-                mask = iu.binarize_bgr_by_adaptive_brightness(cropped, offset=20, to_bgr=False)
-                contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            cropped = box.crop_frame(detect_frame)
+            # 使用自适应亮度二值化提取可能的亮色 UI 标记
+            mask = iu.binarize_bgr_by_adaptive_brightness(cropped, offset=20, to_bgr=False)
+            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-                is_valid = False
-                if contours:
-                    cnt = max(contours, key=cv2.contourArea)
-                    area = cv2.contourArea(cnt)
-                    if area >= 10:  # 过滤极小的噪点
-                        x, y, w, h = cv2.boundingRect(cnt)
-                        aspect_ratio = w / float(max(h, 1))
-                        extent = area / float(max(w * h, 1))
+            if not contours:
+                continue
 
-                        # 正菱形的宽高比应接近 1，面积填充率应接近 0.5
-                        if 0.75 < aspect_ratio < 1.33 and 0.35 < extent < 0.65:
-                            is_valid = True
-                if not is_valid:
-                    self.log_info("find_target is false cause contour analysis failed")
-                    target = is_valid
-                else:
-                    target = box
+            cnt = max(contours, key=cv2.contourArea)
+            area = cv2.contourArea(cnt)
+            if area < 10:  # 过滤极小的噪点
+                continue
+
+            _, _, w, h = cv2.boundingRect(cnt)
+            aspect_ratio = w / float(max(h, 1))
+            extent = area / float(max(w * h, 1))
+
+            # 正菱形的宽高比应接近 1，面积填充率应接近 0.5
+            if 0.75 < aspect_ratio < 1.33 and 0.35 < extent < 0.65:
+                target = True
+                break
+
+        if not target:
+            self.log_info("find_target is false cause contour analysis failed")
 
         return target
 
     def find_lv_async(self, frame=None, force=False):
         ret = self._lv_async
-        if force or self.find_lv_future is None:
-            if self.find_lv_future is not None:
-                old_future = self.find_lv_future
+        if not force and self.find_lv_future is not None:
+            return self._lv_async
+
+        if self.find_lv_future is not None:
+            old_future = self.find_lv_future
+            self.find_lv_future = None
+            old_future.cancel()
+        if frame is None:
+            frame = self.frame
+        now = time.time()
+        self._find_lv_async_started_at = now
+        self.find_lv_future = self.thread_pool_executor.submit(self.find_lv, frame=frame)
+
+        def callback(f):
+            self._find_lv_latency = time.time() - now
+            if self.find_lv_future is not f:
+                return
+            try:
+                self._lv_async = bool(f.result())
+            except CancelledError:
+                return
+            except Exception as e:
+                logger.error("find_lv_async failed", e)
+                self._lv_async = None
+
+            if self.find_lv_future is f:
                 self.find_lv_future = None
-                old_future.cancel()
-            if frame is None:
-                frame = self.frame
-            now = time.time()
-            self._find_lv_async_started_at = now
-            self.find_lv_future = self.thread_pool_executor.submit(self.find_lv, frame=frame)
 
-            def callback(f):
-                self._find_lv_latency = time.time() - now
-                if self.find_lv_future is not f:
-                    return
-                try:
-                    self._lv_async = bool(f.result())
-                except CancelledError:
-                    return
-                except Exception as e:
-                    logger.error("find_lv_async failed", e)
-                    self._lv_async = None
-
-                if self.find_lv_future is f:
-                    self.find_lv_future = None
-
-            self.find_lv_future.add_done_callback(callback)
+        self.find_lv_future.add_done_callback(callback)
         # latency = self._find_lv_latency if ret is not None else -1
         # logger.debug(
         #     f"find_lv: sync False, result {ret}, cost {latency:.3f}s"
@@ -597,7 +600,7 @@ class CombatCheck(BaseNTETask):
         min_area = (15 * scale) ** 2 * 0.8
         max_area = (20 * scale) ** 2 * 1.5
 
-        L_candidates = []
+        l_candidates = []
         v_candidates = []
 
         for cnt in contours:
@@ -620,7 +623,7 @@ class CombatCheck(BaseNTETask):
                 iou = self._match_contour_iou(self._lv_norm_L, cnt, x, y, w, h)
                 if (self._lv_aspect_L * 0.6 < aspect_ratio < self._lv_aspect_L * 1.5) and iou > 0.5:
                     area = cv2.countNonZero(binary[y : y + h, x : x + w])
-                    L_candidates.append(
+                    l_candidates.append(
                         {"x": x, "y": y, "w": w, "h": h, "score": iou, "area": area}
                     )
 
@@ -638,32 +641,34 @@ class CombatCheck(BaseNTETask):
                     )
 
         results: list[Box] = []
-        for L in L_candidates:
+        for l_shape in l_candidates:
             best_v = None
             min_gap = float("inf")
 
-            for v in v_candidates:
-                gap = v["x"] - (L["x"] + L["w"])
-                y_diff = abs(v["y"] - L["y"])
+            for v_shape in v_candidates:
+                gap = v_shape["x"] - (l_shape["x"] + l_shape["w"])
+                y_diff = abs(v_shape["y"] - l_shape["y"])
 
-                # 逻辑核心：v 在 L 的右侧，距离合理，且 Y 轴大致平齐
-                if -(L["w"] * 0.5) <= gap <= (L["h"] * 1.5) and y_diff <= (L["h"] * 0.5):
+                # 逻辑核心：v 在 l_shape 的右侧，距离合理，且 Y 轴大致平齐
+                if -(l_shape["w"] * 0.5) <= gap <= (l_shape["h"] * 1.5) and y_diff <= (
+                    l_shape["h"] * 0.5
+                ):
                     if gap < min_gap:
                         min_gap = gap
-                        best_v = v
+                        best_v = v_shape
 
             if best_v:
-                conf = float((L["score"] + best_v["score"]) / 2.0)
+                conf = float((l_shape["score"] + best_v["score"]) / 2.0)
                 if conf < threshold:
                     continue
-                box_x = L["x"]
-                box_y = min(L["y"], best_v["y"])
-                box_w = (best_v["x"] + best_v["w"]) - L["x"]
-                box_h = max(L["y"] + L["h"], best_v["y"] + best_v["h"]) - box_y
+                box_x = l_shape["x"]
+                box_y = min(l_shape["y"], best_v["y"])
+                box_w = (best_v["x"] + best_v["w"]) - l_shape["x"]
+                box_h = max(l_shape["y"] + l_shape["h"], best_v["y"] + best_v["h"]) - box_y
 
                 pair_crop = binary[box_y : box_y + box_h, box_x : box_x + box_w]
                 pair_area = cv2.countNonZero(pair_crop)
-                if pair_area <= 0 or (L["area"] + best_v["area"]) / pair_area < 0.82:
+                if pair_area <= 0 or (l_shape["area"] + best_v["area"]) / pair_area < 0.82:
                     continue
 
                 results.append(

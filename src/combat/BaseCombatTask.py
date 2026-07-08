@@ -821,10 +821,10 @@ class BaseCombatTask(CharElementUIMixin, CombatCheck):
                 #     self.screenshot('not_in_combat_calling_check_combat')
                 self.raise_not_in_combat("combat check not in combat")
 
-    def in_combat(self, target=False):
+    def in_combat(self):
         with self.skip_sleep_checks() as skip:
             skip.check_combat = True
-            return super().in_combat(target=target)
+            return super().in_combat()
 
     def set_key(self, key, box):
         best = self.find_best_match_in_box(box, ["t", "e", "r", "q"], threshold=0.7)
