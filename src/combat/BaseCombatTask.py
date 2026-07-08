@@ -623,18 +623,16 @@ class BaseCombatTask(CharElementUIMixin, CombatCheck):
         )
 
     def switch_other_char(self, current_char: "BaseChar"):
-        target_index = (current_char.index + 1) % len(self.chars)
-        for char in self.chars:
-            if char and char.index != current_char.index:
-                target_index = char.index
-                break
-        next_char = str(target_index + 1)
-
         from src.tasks.trigger.AutoCombatTask import AutoCombatTask
 
         if isinstance(self, AutoCombatTask):
             current_char.logger.debug("AutoCombatTask, skip switch_other_char")
             return
+        target_index = next(
+            (c.index for c in self.chars if c and c.index != current_char.index),
+            (current_char.index + 1) % len(self.chars),
+        )
+        next_char = str(target_index + 1)
         current_char.logger.debug(
             f"{current_char.char_name} on_combat_end {current_char.index} "
             f"switch next char: {next_char}"
@@ -643,12 +641,10 @@ class BaseCombatTask(CharElementUIMixin, CombatCheck):
         while time.time() - start < 6:
             in_team, current_index, _ = self.in_team()
             if in_team and current_index != current_char.index:
-                for char in self.chars:
-                    if char:
-                        char.is_current_char = char.index == current_index
+                for char in filter(None, self.chars):
+                    char.is_current_char = char.index == current_index
                 break
-            else:
-                self.send_key(next_char)
+            self.send_key(next_char)
             current_char.sleep(0.2, False)
         current_char.logger.debug(
             f"switch_other_char on_combat_end {current_char.index} switch end"
