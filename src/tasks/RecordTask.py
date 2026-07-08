@@ -181,10 +181,8 @@ class RecordTask(BaseNTETask):
                 if count == 0:
                     continue
                 self.operate(
-                    lambda: self.scroll(
-                        int(operation["x"] * self.width),
-                        int(operation["y"] * self.height),
-                        count,
+                    lambda operation=operation, count=count: (
+                        self.scroll(operation["x"], operation["y"], count)
                     ),
                     block=True,
                 )

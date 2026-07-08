@@ -182,6 +182,11 @@ class BaseNTETask(CharUIMixin, MovementMixin, VisionMixin, OgMixin, LogGateMixin
         return super().send_key(
             key, down_time=down_time, interval=interval, after_sleep=after_sleep
         )
+
+    def scroll(self, x, y, count):
+        if isinstance(x, float) and isinstance(y, float):
+            x, y = min(x, 1.0) * self.width, min(y, 1.0) * self.height
+        return super().scroll(x=x, y=y, count=count)
     # fmt: on
 
     def _check_action_interval(self, action_name: Any, interval: float) -> bool:
@@ -477,9 +482,9 @@ class BaseNTETask(CharUIMixin, MovementMixin, VisionMixin, OgMixin, LogGateMixin
         self.sleep(0.1)
         self.wait_until(
             lambda: not self.find_traval_button(),
-            pre_action=lambda: self.operate_click(travel_btn, interval=0.5),
+            pre_action=lambda: self.operate_click(travel_btn, interval=1),
             time_out=20,
-            settle_time=1,
+            settle_time=0.5,
             raise_if_not_found=raise_if_not_found,
         )
         self.sleep(0.1)
