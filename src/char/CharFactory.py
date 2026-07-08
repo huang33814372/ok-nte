@@ -59,7 +59,9 @@ def _build_char_instance(
 
     if not combo_id:
         char_id = char_info["char_id"] if char_info else "unknown"
-        return BaseChar(task, index, char_id=char_id, confidence=sim)
+        instance = BaseChar(task, index, char_id=char_id, confidence=sim)
+        instance.char_name = match_name
+        return instance
 
     if manager.is_builtin_combo(combo_id) and combo_id in char_dict:
         cls = char_dict[combo_id].get("cls", BaseChar)

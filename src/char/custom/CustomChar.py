@@ -165,6 +165,8 @@ class CustomChar(BaseChar):
         if error:
             self.logger.error(f"Syntax error parsing combo '{self.combo_str}': {error}")
             return
+        if not parsed_combo:
+            self.logger.warning("Parsed combo is empty")
         self.parsed_combo = parsed_combo
 
     @staticmethod
