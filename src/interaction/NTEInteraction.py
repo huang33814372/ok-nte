@@ -75,8 +75,8 @@ class NTEInteraction(PostMessageInteraction):
                 self._dynamic_target_hwnd = base_hwnd
                 long_position = 0
 
-            wParam = win32api.MAKELONG(0, win32con.WHEEL_DELTA * scroll_amount)
-            self.post(win32con.WM_MOUSEWHEEL, wParam, long_position)
+            wparam = win32api.MAKELONG(0, win32con.WHEEL_DELTA * scroll_amount)
+            self.post(win32con.WM_MOUSEWHEEL, wparam, long_position)
 
     def _target_hwnd_at(self, abs_x, abs_y, fallback_hwnd):
         for hwnd_info in getattr(self.hwnd_window, "hwnds", []):
@@ -137,6 +137,7 @@ class NTEInteraction(PostMessageInteraction):
     def operate(self, fun, block=False, restore_cursor=True):
         with self._input_lock:
             result = None
+            reset_scene_executor = None
 
             is_outer_operate = False
             if not self._operating:
@@ -147,10 +148,13 @@ class NTEInteraction(PostMessageInteraction):
             if block:
                 self.block_input()
             try:
+                reset_scene_executor = self._enter_reset_scene_without_check()
                 result = fun()
             except Exception as e:
                 logger.error("operate exception", e)
+                raise
             finally:
+                self._exit_reset_scene_without_check(reset_scene_executor)
                 if is_outer_operate:
                     self._operating = False
                     if restore_cursor:
@@ -158,6 +162,35 @@ class NTEInteraction(PostMessageInteraction):
                 if block:
                     self.unblock_input()
             return result
+
+    def _enter_reset_scene_without_check(self):
+        device_manager = getattr(self.hwnd_window, "device_manager", None)
+        executor = getattr(device_manager, "executor", None)
+        if executor is None:
+            return None
+
+        if not hasattr(executor, "_nte_operate_reset_scene_depth"):
+            executor._nte_operate_reset_scene_depth = 0
+
+        if not hasattr(executor, "_nte_original_reset_scene"):
+            executor._nte_original_reset_scene = executor.reset_scene
+
+            def reset_scene(check_enabled=True):
+                if executor._nte_operate_reset_scene_depth > 0:
+                    check_enabled = False
+                return executor._nte_original_reset_scene(check_enabled=check_enabled)
+
+            executor.reset_scene = reset_scene
+
+        executor._nte_operate_reset_scene_depth += 1
+        return executor
+
+    def _exit_reset_scene_without_check(self, executor):
+        if executor is None:
+            return
+        executor._nte_operate_reset_scene_depth = max(
+            0, executor._nte_operate_reset_scene_depth - 1
+        )
 
     def _restore_cursor(self):
         time.sleep(0.035)
