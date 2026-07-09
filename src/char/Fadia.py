@@ -1,6 +1,6 @@
 
 from src.char.BaseChar import BaseChar
-from src.combat.planner import FieldPreference, Planner, Role, RoleProfile
+from src.combat.planner import FieldPreference, Role, RoleProfile
 
 
 class Fadia(BaseChar):
@@ -13,8 +13,13 @@ class Fadia(BaseChar):
             field_preference=FieldPreference.SUB_DPS,
         )
 
-    def combat_intents(self, context):
-        return self.intents(
-            self.click_ultimate_action(chain_policy=Planner.EntryChainPolicy.STOP_ON_SUCCESS),
-            self.click_skill_action(),
-        )
+    def combat_plan(self, context):
+        ultimate = self.click_ultimate_action()
+        skill = self.click_skill_action()
+
+        def entry():
+            ultimate_result = yield ultimate
+            if not ultimate_result:
+                yield skill
+
+        return self.plan(ultimate, skill, entry=entry)

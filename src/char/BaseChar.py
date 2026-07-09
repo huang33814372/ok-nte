@@ -1,6 +1,6 @@
 import time
 from enum import StrEnum
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from ok import Logger
 
@@ -12,9 +12,9 @@ from src.combat.planner import (
     ActionSlot,
     ActionTag,
     CombatContext,
-    EntryChainPolicy,
     FieldClaim,
     FieldPreference,
+    CombatPlan,
     Role,
     RoleProfile,
     SwitchInGuard,
@@ -186,26 +186,27 @@ class BaseChar:
 
         return SwitchInGuard.allow()
 
-    def combat_intents(self, context: CombatContext) -> list[ActionIntent | FieldClaim]:
-        """声明角色交给 planner 的战斗意图。
+    def combat_plan(self, context: CombatContext) -> CombatPlan:
+        """声明角色交给 planner 的完整战斗计划。
 
-        一个入口同时返回 `ActionIntent` 和 `FieldClaim`。前者表达“进场后做什么”，
-        后者表达“为什么应该被切进来”。
+        `CombatPlan.actions` 表达“进场后有哪些 planner 可见动作”，用于评分、
+        route/request/reservation 匹配；`claims` 表达“为什么应该被切进来”；
+        `entry` 表达普通进场后的 Python 动作流。
 
         规则:
-            - 这里只声明动作和入场诉求，不要调用 `context.request_route()`、
-              `reserve_actions()` 或 `request_tags()`。
-            - 普通进场会按这里的声明顺序尝试 allowed action。
+            - 这里只创建 plan，不要在创建 plan 时发送输入或发布一次性请求。
+            - 普通进场默认按 actions 声明顺序尝试 allowed action。
             - 切人评分会从该角色 ready actions 中挑最高分 action 代表角色参赛。
+            - 复杂角色可传入 entry generator，用普通 Python 控制动作之间的分支。
 
         Args:
             context: planner 上下文，仅用于查询，不应用来发布一次性请求。
 
         Returns:
-            `ActionIntent` / `FieldClaim` 列表。可用 `self.intents(...)` 过滤 None。
+            `CombatPlan`。
         """
 
-        return self.intents(
+        return self.plan(
             self.click_ultimate_action("base_ultimate"),
             self.click_skill_action("base_skill"),
         )
@@ -214,7 +215,7 @@ class BaseChar:
         """声明随队伍生命周期生效的 planner 策略。
 
         这里适合发布常驻 reservation 这类长期策略。普通角色通常不需要覆盖。
-        `combat_intents()` 应保持为动作/入场诉求声明，不要在评分扫描时发布请求。
+        `combat_plan()` 应保持为动作/入场诉求声明，不要在评分扫描时发布请求。
 
         planner reset 当前队伍后会调用此方法。适合发布由队伍组成决定的长期规则，
         不适合发布“本次 Q/E 成功后才出现”的临时窗口。
@@ -225,14 +226,23 @@ class BaseChar:
 
         return None
 
-    def intents(self, *intents) -> list[ActionIntent | FieldClaim]:
-        """过滤空意图并返回列表。
+    def plan(
+        self,
+        *actions: ActionIntent | None,
+        claims: list[FieldClaim] | tuple[FieldClaim, ...] | None = None,
+        entry=None,
+    ) -> CombatPlan:
+        """创建角色 `CombatPlan`，并过滤空动作。
 
         用法:
-            return self.intents(action_or_none, claim_or_none)
+            return self.plan(action_or_none, claims=[claim], entry=entry)
         """
 
-        return [intent for intent in intents if intent is not None]
+        return CombatPlan(
+            actions=[action for action in actions if action is not None],
+            claims=[claim for claim in claims or [] if claim is not None],
+            entry=entry,
+        )
 
     def click_arc_action(
         self,
@@ -241,8 +251,6 @@ class BaseChar:
         reason: str = "arc action available",
         can_execute=None,
         priority_ready: ActionPredicate | None = None,
-        after_execute: Callable[[CombatContext, bool], bool | None] | None = None,
-        chain_policy: EntryChainPolicy = EntryChainPolicy.CONTINUE,
     ):
         """创建一个 弧盘 动作声明。
 
@@ -252,9 +260,6 @@ class BaseChar:
             reason: 切人/执行日志理由。
             can_execute: 额外硬限制；slot reservation 由 planner 统一检查。
             priority_ready: 只用于切人评分。默认永远不因为 arc 主动切人。
-            after_execute: 执行成功后的回调，(context, is_current) -> bool，返回 True 表示
-                           可以立即进入下一个 allowed action。
-            chain_policy: 该 action 之后是否允许执行下一个 allowed action。
 
         Returns:
             `ActionIntent`。
@@ -266,16 +271,11 @@ class BaseChar:
         return self.planner_action(
             tags=action_tags,
             slot=ActionSlot.ARC,
-            execute=lambda context: self._execute_click_action(
-                context,
-                click=lambda: self.click_arc(),
-                after_execute=after_execute,
-            ),
+            execute=lambda context: self.click_arc(),
             name=name,
             reason=reason,
             can_execute=can_execute,
             priority_ready=priority_ready or (lambda _: False),
-            chain_policy=chain_policy,
         )
 
     def click_ultimate_action(
@@ -284,8 +284,6 @@ class BaseChar:
         tags: set[ActionTag] | None = None,
         reason: str = "ultimate action available",
         can_execute=None,
-        after_execute: Callable[[CombatContext, bool], bool | None] | None = None,
-        chain_policy: EntryChainPolicy = EntryChainPolicy.CONTINUE,
     ):
         """创建一个 Q 动作声明。
 
@@ -294,15 +292,11 @@ class BaseChar:
             tags: 动作标签。默认 `{ActionTag.ULTIMATE_ACTION}`。
             reason: 切人/执行日志理由。
             can_execute: 额外硬限制；slot reservation 由 planner 统一检查。
-            after_execute: Q 点击后执行的角色内后处理，参数为 `(context, success)`。
-                返回 bool 时会覆盖动作最终成功状态；返回 None 时保留点击结果。
-            chain_policy: 动作结束后是否继续本次入场。
 
         Behavior:
             - 自动设置 `slot=ActionSlot.ULTIMATE`。
             - `priority_ready` 自动使用 `self.ultimate_available()`。
             - `execute` 调用 `self.click_ultimate()`。
-            - `click_ultimate()` 后调用 `after_execute(context, success)`。
             - planner 会自动用 `slot=ULTIMATE` 检查 reservation。
         """
 
@@ -312,16 +306,11 @@ class BaseChar:
         return self.planner_action(
             tags=action_tags,
             slot=ActionSlot.ULTIMATE,
-            execute=lambda context: self._execute_click_action(
-                context,
-                click=lambda: self.click_ultimate(),
-                after_execute=after_execute,
-            ),
+            execute=lambda context: self.click_ultimate(),
             name=name,
             reason=reason,
             can_execute=can_execute,
             priority_ready=lambda _: self.ultimate_available(),
-            chain_policy=chain_policy,
         )
 
     def click_skill_action(
@@ -331,8 +320,6 @@ class BaseChar:
         reason: str = "skill action available",
         down_time: float = 0.01,
         can_execute=None,
-        after_execute: Callable[[CombatContext, bool], bool | None] | None = None,
-        chain_policy: EntryChainPolicy = EntryChainPolicy.CONTINUE,
     ):
         """创建一个 E 动作声明。
 
@@ -342,15 +329,11 @@ class BaseChar:
             reason: 切人/执行日志理由。
             down_time: 传给 `click_skill(down_time=...)` 的按下时间。
             can_execute: 额外硬限制；slot reservation 由 planner 统一检查。
-            after_execute: E 点击后执行的角色内后处理，参数为 `(context, success)`。
-                返回 bool 时会覆盖动作最终成功状态；返回 None 时保留点击结果。
-            chain_policy: 动作结束后是否继续本次入场。
 
         Behavior:
             - 自动设置 `slot=ActionSlot.SKILL`。
             - `priority_ready` 自动使用 `self.skill_available()`。
             - `execute` 调用 `self.click_skill(...)`。
-            - `click_skill()` 后调用 `after_execute(context, success)`。
             - planner 会自动用 `slot=SKILL` 检查 reservation。
         """
 
@@ -360,30 +343,12 @@ class BaseChar:
         return self.planner_action(
             tags=action_tags,
             slot=ActionSlot.SKILL,
-            execute=lambda context: self._execute_click_action(
-                context,
-                click=lambda: self.click_skill(down_time=down_time),
-                after_execute=after_execute,
-            ),
+            execute=lambda context: self.click_skill(down_time=down_time),
             name=name,
             reason=reason,
             can_execute=can_execute,
             priority_ready=lambda _: self.skill_available(),
-            chain_policy=chain_policy,
         )
-
-    def _execute_click_action(
-        self,
-        context: CombatContext,
-        click: Callable[[], bool],
-        after_execute: Callable[[CombatContext, bool], bool | None] | None = None,
-    ):
-        success = click()
-        if after_execute is not None:
-            override = after_execute(context, success)
-            if isinstance(override, bool):
-                return override
-        return success
 
     def planner_action(
         self,
@@ -394,7 +359,6 @@ class BaseChar:
         reason: str = "",
         can_execute: ActionPredicate | None = None,
         priority_ready: ActionPredicate | None = None,
-        chain_policy: EntryChainPolicy = EntryChainPolicy.CONTINUE,
     ):
         """创建一个交给 `CombatPlanner` 调度的动作声明。
 
@@ -410,7 +374,6 @@ class BaseChar:
             reason: 日志和切人理由。
             can_execute: 额外 planner 层硬限制；False 时不执行也不评分。
             priority_ready: 只用于切人评分；False 不代表已在场时不能尝试。
-            chain_policy: 动作结束后是否继续本次入场。
 
         Returns:
             `ActionIntent`。
@@ -432,7 +395,6 @@ class BaseChar:
             reason=reason,
             can_execute=can_execute,
             priority_ready=priority_ready,
-            chain_policy=chain_policy,
         )
 
     def has_cd(self, box_name):

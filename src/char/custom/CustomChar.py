@@ -9,7 +9,6 @@ from src.combat.planner import (
     ActionSlot,
     ActionTag,
     FieldPreference,
-    Planner,
     Role,
     RoleProfile,
 )
@@ -49,9 +48,9 @@ class CustomChar(BaseChar):
     def describe_role(self):
         return RoleProfile(role=Role.SUB_DPS, field_preference=FieldPreference.SUB_DPS)
 
-    def combat_intents(self, context):
+    def combat_plan(self, context):
         if not self.parsed_combo:
-            return super().combat_intents(context)
+            return super().combat_plan(context)
 
         tags = {ActionTag.LEGACY_COMBO, ActionTag.DAMAGE}
         reason = "legacy combo ready"
@@ -61,14 +60,13 @@ class CustomChar(BaseChar):
         if self.ultimate_available():
             tags.add(ActionTag.ULTIMATE_ACTION)
 
-        return self.intents(
+        return self.plan(
             self.planner_action(
                 name="legacy_combo",
                 tags=tags,
                 slot=ActionSlot.LEGACY_COMBO,
                 execute=self.execute_legacy_combo_action,
                 reason=reason,
-                chain_policy=Planner.EntryChainPolicy.STOP,
             )
         )
 

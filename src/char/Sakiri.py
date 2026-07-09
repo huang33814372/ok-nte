@@ -14,8 +14,8 @@ class Sakiri(BaseChar):
             max_field_time=1.0,
         )
 
-    def combat_intents(self, context):
-        return self.intents(
+    def combat_plan(self, context):
+        return self.plan(
             self.click_ultimate_action(),
             self.click_skill_action(down_time=0.25),
         )

@@ -15,21 +15,17 @@ class Shinku(BaseChar):
             max_field_time=1.5,
         )
 
-    def combat_intents(self, context):
-        return self.intents(
-            self.click_skill_action(),
-            self.click_ultimate_action(
-                after_execute=self._after_ultimate_execute,
-            ),
-        )
+    def combat_plan(self, context):
+        skill = self.click_skill_action()
+        ultimate = self.click_ultimate_action()
 
-    def _after_ultimate_execute(
-        self,
-        context: CombatContext = None,
-        success=False,
-    ):
-        if success:
-            self.perform_in_ult(context)
+        def entry():
+            yield skill
+            ultimate_result = yield ultimate
+            if ultimate_result:
+                self.perform_in_ult(context)
+
+        return self.plan(skill, ultimate, entry=entry)
 
     def perform_in_ult(self, context: CombatContext = None):
         start = time.time()

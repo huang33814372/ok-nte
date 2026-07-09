@@ -15,19 +15,17 @@ class Chiz(BaseChar):
             field_preference=FieldPreference.MAIN_DPS,
         )
 
-    def combat_intents(self, context):
-        return self.intents(
-            self.click_ultimate_action(after_execute=self._after_ultimate_execute),
-            self.click_skill_action(),
-        )
+    def combat_plan(self, context):
+        ultimate = self.click_ultimate_action()
+        skill = self.click_skill_action()
 
-    def _after_ultimate_execute(
-        self,
-        context=None,
-        success=False,
-    ):
-        if success:
-            self.perform_in_ult()
+        def entry():
+            ultimate_result = yield ultimate
+            if ultimate_result:
+                self.perform_in_ult()
+            yield skill
+
+        return self.plan(ultimate, skill, entry=entry)
 
     def perform_in_ult(self):
         box = self.task.box_of_screen(0.487, 0.775, 0.514, 0.798, name="percentage")

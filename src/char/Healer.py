@@ -10,8 +10,8 @@ class Healer(BaseChar):
             max_field_time=0.5,
         )
 
-    def combat_intents(self, context):
-        return self.intents(
+    def combat_plan(self, context):
+        return self.plan(
             self.click_ultimate_action(
                 tags={ActionTag.ULTIMATE_ACTION, ActionTag.SUPPORT},
                 reason="support ultimate available",

@@ -82,9 +82,9 @@ class Hotori(BaseChar):
             until=Planner.NEVER_EXPIRES,
         )
 
-    def combat_intents(self, context):
+    def combat_plan(self, context):
         if self.max_records == 0:
-            return self.intents(self.click_ultimate_action())
+            return self.plan(self.click_ultimate_action())
 
         claims = []
         if self.records_status() is None or self._should_record():
@@ -94,30 +94,33 @@ class Hotori(BaseChar):
                 )
             )
 
-        return self.intents(
-            self.planner_action(
-                name="hotori_ultimate_with_records",
-                tags={
-                    ActionTag.ULTIMATE_ACTION,
-                    ActionTag.SUPPORT,
-                    ActionTag.COORDINATION_FINISHER,
-                },
-                execute=self._execute_hotori_ultimate,
-                can_execute=lambda _: self.ready_for_ultimate(),
-                reason="team skill records ready",
-                priority_ready=lambda _: self.ready_for_ultimate(),
-                chain_policy=Planner.EntryChainPolicy.STOP_ON_SUCCESS,
-            ),
-            self.planner_action(
-                name="hotori_team_record_setup",
-                tags={ActionTag.COORDINATION, ActionTag.SUPPORT},
-                execute=self._execute_hotori_setup,
-                reason="open team skill record window",
-                can_execute=lambda _: self._can_start_record_setup(),
-                priority_ready=lambda _: self._should_record(),
-            ),
-            *claims,
+        ultimate = self.planner_action(
+            name="hotori_ultimate_with_records",
+            tags={
+                ActionTag.ULTIMATE_ACTION,
+                ActionTag.SUPPORT,
+                ActionTag.COORDINATION_FINISHER,
+            },
+            execute=self._execute_hotori_ultimate,
+            can_execute=lambda _: self.ready_for_ultimate(),
+            reason="team skill records ready",
+            priority_ready=lambda _: self.ready_for_ultimate(),
         )
+        setup = self.planner_action(
+            name="hotori_team_record_setup",
+            tags={ActionTag.COORDINATION, ActionTag.SUPPORT},
+            execute=self._execute_hotori_setup,
+            reason="open team skill record window",
+            can_execute=lambda _: self._can_start_record_setup(),
+            priority_ready=lambda _: self._should_record(),
+        )
+
+        def entry():
+            ultimate_result = yield ultimate
+            if not ultimate_result:
+                yield setup
+
+        return self.plan(ultimate, setup, claims=claims, entry=entry)
     
     def _can_start_record_setup(self):
         return self.count_team_skill_records() < 1 and self._should_record()

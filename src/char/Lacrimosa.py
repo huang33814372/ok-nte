@@ -13,14 +13,14 @@ class Lacrimosa(BaseChar):
             max_field_time=1.5,
         )
 
-    def combat_intents(self, context):
+    def combat_plan(self, context):
         claims = []
         if self.time_elapsed_accounting_for_freeze(self.last_switch_time) > 2.5:
             claims.append(FieldClaim.normal("Lacrimosa wants short field time"))
-        return self.intents(
+        return self.plan(
             self.click_ultimate_action(),
             self.click_skill_action(),
-            *claims,
+            claims=claims,
         )
     
     def on_combat_end(self, chars):

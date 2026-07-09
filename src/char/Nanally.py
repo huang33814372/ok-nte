@@ -21,29 +21,24 @@ class Nanally(BaseChar):
             max_field_time=1.5,
         )
 
-    def combat_intents(self, context):
-        return self.intents(
-            self.click_skill_action(
-                reason="Nanally skill available",
-                after_execute=self._after_skill_execute,
-            ),
-            self.click_ultimate_action(
-                reason="Nanally ultimate available",
-                after_execute=self._after_ultimate_execute,
-            ),
+    def combat_plan(self, context):
+        skill = self.click_skill_action(reason="Nanally skill available")
+        ultimate = self.click_ultimate_action(reason="Nanally ultimate available")
+
+        def entry():
+            skill_result = yield skill
+            if skill_result and self.ultimate_available():
+                self.sleep(0.6)
+
+            ultimate_result = yield ultimate
+            if ultimate_result:
+                self.perform_in_ult(context)
+
+        return self.plan(
+            skill,
+            ultimate,
+            entry=entry,
         )
-
-    def _after_skill_execute(self, context: CombatContext = None, success=False):
-        if success and self.ultimate_available():
-            self.sleep(0.6)
-
-    def _after_ultimate_execute(
-        self,
-        context: CombatContext = None,
-        success=False,
-    ):
-        if success:
-            self.perform_in_ult(context)
 
     def perform_in_ult(self, context: CombatContext = None):
         start = time.time()

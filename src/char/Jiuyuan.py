@@ -3,7 +3,6 @@ from src.combat.planner import (
     ActionTag,
     CombatContext,
     FieldPreference,
-    Planner,
     Role,
     RoleProfile,
 )
@@ -20,15 +19,21 @@ class Jiuyuan(BaseChar):
             max_field_time=1.0,
         )
 
-    def combat_intents(self, context):
-        return self.intents(
-            self.click_ultimate_action(),
-            self.click_skill_action(chain_policy=Planner.EntryChainPolicy.STOP_ON_SUCCESS),
-            self.planner_action(
-                tags=ActionTag.DEFAULT_ACTION,
-                execute=self.fire_bullets,
-            ),
+    def combat_plan(self, context):
+        ultimate = self.click_ultimate_action()
+        skill = self.click_skill_action()
+        bullets = self.planner_action(
+            tags=ActionTag.DEFAULT_ACTION,
+            execute=self.fire_bullets,
         )
+
+        def entry():
+            yield ultimate
+            skill_result = yield skill
+            if not skill_result:
+                yield bullets
+
+        return self.plan(ultimate, skill, bullets, entry=entry)
 
     def fire_bullets(self, context: CombatContext = None):
         if context.has_strict_route():
