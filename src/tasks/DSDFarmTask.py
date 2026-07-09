@@ -287,6 +287,29 @@ class DSDFarmTask(NTEOneTimeTask, BaseCombatTask):
         self.operate_click(teleport, action_name="click_nearest_map_teleport")
         self.sleep(0.5)
         return self.click_traval_button(raise_if_not_found=False)
+    
+    def teleport_to_bonfire(self, box: Box=None, threshold=0.7, order=1):
+        self.ensure_main()
+        self.open_map()
+        if not box:
+            box = self.main_viewport
+
+        teleports = self.find_feature(Labels.bonfire_teleport, box=box, threshold=threshold)
+        if not teleports:
+            return False
+
+        self.log_info(f"found map teleports {teleports}")
+
+        teleports.sort(key=lambda tp: tp.center_distance(self.default_box.center))
+
+        if len(teleports) >= order:
+            teleport = teleports[order - 1]
+        else:
+            teleport = teleports[-1]
+
+        self.operate_click(teleport, action_name="click_map_teleport")
+        self.sleep(0.5)
+        return self.click_traval_button(raise_if_not_found=False)
 
     def teleport_to_top_bonfire(self, box: Box, threshold=0.7):
         self.ensure_main()
