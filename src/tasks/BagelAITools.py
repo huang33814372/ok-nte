@@ -1175,7 +1175,11 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
                 if reply_prompt == "" or reply_prompt in self.def_prompt:
                     reply_prompt = self.model_prompt.get("REPLY", "")
                 model_reply = self.get_vlm_response(
-                    reply_prompt, cropped_frame, post_title=title_text, author=author_name
+                    reply_prompt,
+                    cropped_frame,
+                    post_title=title_text,
+                    author=author_name,
+                    max_len=25,
                 )
                 self.log_info(f"模型生成 | 为帖子【{title_text}】生成回复: '{model_reply}'")
                 return model_reply
@@ -1199,9 +1203,11 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
         cropped_frame = None
         if generate_type == "title":
             action = "发帖标题"
+            max_len = 20
             cropped_frame = self.get_frame_by_ratio(0.015, 0.15, 0.685, 0.82)
         else:
             action = "发帖文案"
+            max_len = 50
             cropped_frame = self.get_frame_by_ratio(0.015, 0.10, 0.980, 0.82)
         # 如果配置了大模型，图片存在，优先走大模型
         if cropped_frame is not None and self.config.get(self.CONF_MODEL, False):
@@ -1221,7 +1227,7 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
                     )
                     if post_prompt == "" or post_prompt in self.def_prompt:
                         post_prompt = self.model_prompt.get("POST_CONTENT", "")
-                model_post = self.get_vlm_response(post_prompt, cropped_frame)
+                model_post = self.get_vlm_response(post_prompt, cropped_frame, max_len=max_len)
                 self.log_info(f"模型生成 | 为所选图片生成{action}: '{model_post}'")
                 if generate_type == "title":
                     self.nowview_post = model_post
@@ -1236,7 +1242,7 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
         return base_post
 
     # 模型调用模块
-    def get_vlm_response(self, prompt, post_img_frame, post_title=None, author=None):
+    def get_vlm_response(self, prompt, post_img_frame, post_title=None, author=None, max_len=25):
         """
         使用原生 requests 调用 VLM 模型
         （支持从 /v1/models 自动抓取真名，完美兼容 llama.cpp/LM Studio）
@@ -1320,13 +1326,15 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
             timeout = 30 if timeout_raw in ("", None) else int(timeout_raw)
         except (ValueError, TypeError):
             timeout = 30
-        response = requests.post(api_url, headers=headers, data=json.dumps(payload), timeout=timeout)
+        response = requests.post(
+            api_url, headers=headers, data=json.dumps(payload), timeout=timeout
+        )
 
         if response.status_code == 200:
             model_reply = response.json()["choices"][0]["message"]["content"].strip()
             if not model_reply:
                 raise RuntimeError(f"VLM 返回内容异常, 详情: {response.text}")
-            model_reply = self.text_length(model_reply, max_len=25)
+            model_reply = self.text_length(model_reply, max_len=max_len)
             return model_reply
         else:
             raise RuntimeError(
