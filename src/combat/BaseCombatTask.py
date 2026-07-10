@@ -906,13 +906,10 @@ class BaseCombatTask(CharElementUIMixin, CombatCheck):
         self.combat_planner.reset(self.chars)
         self.info_set("char elements", elements)
 
-        healer_count = 0
         self.info_set("chars", [])
         for char in self.chars:
             if char is not None:
                 char.reset_state()
-                if isinstance(char, Healer):
-                    healer_count += 1
                 if char.index == current_index:
                     char.is_current_char = True
                 else:

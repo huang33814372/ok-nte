@@ -293,7 +293,7 @@ class DSDFarmTask(NTEOneTimeTask, BaseCombatTask):
         self.sleep(0.5)
         return self.click_traval_button(raise_if_not_found=False)
     
-    def teleport_to_bonfire(self, box: Box=None, threshold=0.7, order=1):
+    def teleport_to_bonfire(self, box: Box = None, threshold=0.7, order=1):
         self.ensure_main()
         self.open_map()
         if not box:

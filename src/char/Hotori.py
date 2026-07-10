@@ -69,6 +69,7 @@ class Hotori(BaseChar):
             role=Role.SUB_DPS,
             field_preference=FieldPreference.SETUP_ONLY,
             combat_start_priority=100,
+            max_field_time=0,
         )
 
     def combat_policies(self, context: CombatContext) -> None:
