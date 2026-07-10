@@ -14,7 +14,7 @@ from .requests import (
     request_counts_as_active,
     request_reserves_action,
 )
-from .state import CombatState, _IntentSet
+from .state import CombatState, _PlanSnapshot
 from .types import (
     NEVER_EXPIRES,
     ActionReservation,
@@ -42,7 +42,7 @@ class CombatContext:
     _state: CombatState
     current_char: "BaseChar"
     _published_requests: list[_Request] = field(default_factory=list)
-    _intent_cache: dict[int, _IntentSet] | None = None
+    _plan_cache: dict[int, _PlanSnapshot] | None = None
 
     @property
     def chars(self) -> list["BaseChar"]:

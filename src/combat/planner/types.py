@@ -599,10 +599,6 @@ class CombatPlan:
         self.actions = list(self.actions)
         self.claims = list(self.claims)
 
-
-CombatIntent = ActionIntent | FieldClaim
-
-
 def _display_result_name(result: ActionResult) -> str:
     if result.name:
         return result.name

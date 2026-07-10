@@ -41,7 +41,7 @@ class FakeChar:
         name,
         field_preference=FieldPreference.SUB_DPS,
         tags=None,
-        intents=None,
+        plan_items=None,
         policies=None,
         claims=None,
         can_execute=None,
@@ -60,7 +60,7 @@ class FakeChar:
         self.is_current_char = False
         self._field_preference = field_preference
         self._tags = set(tags or {ActionTag.DAMAGE})
-        self._intents = intents
+        self._plan_items = plan_items
         self._policies = policies
         self._claims = claims or []
         self._can_execute = can_execute
@@ -72,7 +72,7 @@ class FakeChar:
         self._cycle_full = cycle_full
         self.is_dead = False
         self.waited = 0
-        self.intent_calls = 0
+        self.plan_calls = 0
 
     def __repr__(self):
         return self.name
@@ -94,14 +94,14 @@ class FakeChar:
         )
 
     def combat_plan(self, context):
-        self.intent_calls += 1
-        if callable(self._intents):
-            intents = self._intents(context)
-            if isinstance(intents, CombatPlan):
-                return intents
-            return self._plan_from_intents(intents)
-        if self._intents is not None:
-            return self._plan_from_intents(self._intents)
+        self.plan_calls += 1
+        if callable(self._plan_items):
+            plan_items = self._plan_items(context)
+            if isinstance(plan_items, CombatPlan):
+                return plan_items
+            return self._plan_from_plan_items(plan_items)
+        if self._plan_items is not None:
+            return self._plan_from_plan_items(self._plan_items)
 
         claims = self._claims(context) if callable(self._claims) else self._claims
         slot = None
@@ -109,7 +109,7 @@ class FakeChar:
             slot = ActionSlot.SKILL
         elif ActionTag.ULTIMATE_ACTION in self._tags:
             slot = ActionSlot.ULTIMATE
-        return self._plan_from_intents([
+        return self._plan_from_plan_items([
             ActionIntent(
                 name=f"{self.name}_action",
                 tags=set(self._tags),
@@ -126,14 +126,14 @@ class FakeChar:
             )
         ] + list(claims))
 
-    def _plan_from_intents(self, intents):
+    def _plan_from_plan_items(self, plan_items):
         actions = []
         claims = []
-        for intent in intents:
-            if isinstance(intent, ActionIntent):
-                actions.append(intent)
-            elif isinstance(intent, FieldClaim):
-                claims.append(intent)
+        for item in plan_items:
+            if isinstance(item, ActionIntent):
+                actions.append(item)
+            elif isinstance(item, FieldClaim):
+                claims.append(item)
         return CombatPlan(actions=actions, claims=claims)
 
     def combat_policies(self, context):
@@ -156,10 +156,10 @@ class FakeChar:
 
 
 class PublicApiChar(BaseChar):
-    def __init__(self, task, index, name, intents_factory, max_field_time=0):
+    def __init__(self, task, index, name, plan_factory, max_field_time=0):
         super().__init__(task, index, char_id=name)
         self.char_name = name
-        self._intents_factory = intents_factory
+        self._plan_factory = plan_factory
         self._max_field_time = max_field_time
         self.skill_clicked = 0
         self.ultimate_clicked = 0
@@ -173,7 +173,7 @@ class PublicApiChar(BaseChar):
         return self.char_name
 
     def combat_plan(self, context):
-        return self._intents_factory(self, context)
+        return self._plan_factory(self, context)
 
     def describe_role(self):
         return RoleProfile(max_field_time=self._max_field_time)
@@ -316,13 +316,13 @@ class TestCombatPlanner(unittest.TestCase):
         claimed = FakeChar(
             1,
             "claimed",
-            claims=lambda _: [FieldClaim.high("claim also scans intents")],
+            claims=lambda _: [FieldClaim.high("claim also scans plan")],
         )
         planner = self._planner([current, claimed])
 
         planner.decide_switch(current)
 
-        self.assertEqual(claimed.intent_calls, 1)
+        self.assertEqual(claimed.plan_calls, 1)
 
     def test_field_claim_can_request_entry_without_ready_action(self):
         current = FakeChar(0, "current")
@@ -339,6 +339,53 @@ class TestCombatPlanner(unittest.TestCase):
 
         self.assertEqual(decision.target, claimed)
         self.assertIn("field claim", decision.reason)
+
+    def test_field_claim_expected_entry_replays_into_entry_flow(self):
+        calls = []
+        current = FakeChar(0, "current")
+        ultimate = self._action(
+            "claimed_ultimate",
+            {ActionTag.ULTIMATE_ACTION},
+            ActionSlot.ULTIMATE,
+            calls,
+        )
+        skill = self._action(
+            "claimed_skill",
+            {ActionTag.SKILL_ACTION},
+            ActionSlot.SKILL,
+            calls,
+        )
+
+        def entry():
+            ultimate_result = yield ultimate
+            if not ultimate_result:
+                yield skill
+
+        claimed = FakeChar(
+            1,
+            "claimed",
+            priority_ready=lambda _: False,
+            max_field_time=0,
+            plan_items=lambda _: CombatPlan(
+                [ultimate, skill],
+                claims=[
+                    FieldClaim.critical(
+                        "claim burst",
+                        expected_entry=ExpectedEntry(slot=ActionSlot.ULTIMATE),
+                    )
+                ],
+                entry=entry,
+            ),
+        )
+        planner = self._planner([current, claimed])
+
+        decision = planner.decide_switch(current)
+        planner.expect_entry_action(decision.target, decision.expected_entry)
+        result = planner.perform_current_char(claimed)
+
+        self.assertEqual(decision.target, claimed)
+        self.assertEqual(calls, ["claimed_ultimate"])
+        self.assertEqual(result.name, "claimed_ultimate")
 
     def test_combat_start_uses_role_profile_priority(self):
         current = FakeChar(0, "current")
@@ -382,7 +429,7 @@ class TestCombatPlanner(unittest.TestCase):
         char = FakeChar(
             0,
             "anonymous",
-            intents=lambda _: [
+            plan_items=lambda _: [
                 ActionIntent(
                     tags={ActionTag.SKILL_ACTION},
                     slot=ActionSlot.CUSTOM,
@@ -414,7 +461,7 @@ class TestCombatPlanner(unittest.TestCase):
             0,
             "lacrimosa",
             field_preference=FieldPreference.MAIN_DPS,
-            intents=lambda _: [
+            plan_items=lambda _: [
                 ActionIntent(
                     name="lacrimosa_skill",
                     tags={ActionTag.SKILL_ACTION},
@@ -438,7 +485,7 @@ class TestCombatPlanner(unittest.TestCase):
             0,
             "main",
             field_preference=FieldPreference.MAIN_DPS,
-            intents=lambda _: [
+            plan_items=lambda _: [
                 ActionIntent(
                     name="main_skill",
                     tags={ActionTag.SKILL_ACTION},
@@ -458,12 +505,12 @@ class TestCombatPlanner(unittest.TestCase):
         self.assertTrue(result.success)
         self.assertEqual(char.waited, 5)
 
-    def test_perform_current_char_can_chain_ultimate_and_skill(self):
+    def test_default_entry_runs_ultimate_and_skill(self):
         calls = []
         char = FakeChar(
             0,
             "combo",
-            intents=lambda _: [
+            plan_items=lambda _: [
                 self._action(
                     "combo_ultimate",
                     {ActionTag.ULTIMATE_ACTION},
@@ -485,14 +532,14 @@ class TestCombatPlanner(unittest.TestCase):
         self.assertEqual(calls, ["combo_ultimate", "combo_skill"])
         self.assertEqual(result.name, "combo_skill")
 
-    def test_reservation_does_not_stop_entry_action_chain(self):
+    def test_reservation_does_not_stop_entry_flow(self):
         calls = []
         source = FakeChar(0, "hotori")
         reserved = FakeChar(1, "zero")
         char = FakeChar(
             2,
             "nanally",
-            intents=lambda _: [
+            plan_items=lambda _: [
                 self._action("nanally_skill", {ActionTag.SKILL_ACTION}, ActionSlot.SKILL, calls),
                 self._action(
                     "nanally_ultimate",
@@ -518,14 +565,14 @@ class TestCombatPlanner(unittest.TestCase):
         self.assertEqual(calls, ["nanally_skill", "nanally_ultimate"])
         self.assertEqual(result.name, "nanally_ultimate")
 
-    def test_reservation_does_not_stop_failure_entry_action_chain(self):
+    def test_reservation_does_not_stop_failed_entry_flow(self):
         calls = []
         source = FakeChar(0, "hotori")
         reserved = FakeChar(1, "zero")
         char = FakeChar(
             2,
             "jiuyuan",
-            intents=lambda _: [
+            plan_items=lambda _: [
                 ActionIntent(
                     name="jiuyuan_ultimate",
                     tags={ActionTag.ULTIMATE_ACTION},
@@ -562,14 +609,14 @@ class TestCombatPlanner(unittest.TestCase):
         self.assertEqual(calls, ["ultimate", "jiuyuan_skill", "jiuyuan_bullets"])
         self.assertEqual(result.name, "jiuyuan_bullets")
 
-    def test_switch_request_does_not_stop_failure_entry_action_chain(self):
+    def test_switch_request_does_not_stop_failed_entry_flow(self):
         calls = []
         source = FakeChar(0, "hotori")
         target = FakeChar(1, "zero")
         current = FakeChar(
             2,
             "jiuyuan",
-            intents=lambda _: [
+            plan_items=lambda _: [
                 ActionIntent(
                     name="jiuyuan_ultimate",
                     tags={ActionTag.ULTIMATE_ACTION},
@@ -596,13 +643,13 @@ class TestCombatPlanner(unittest.TestCase):
         self.assertEqual(calls, ["ultimate", "jiuyuan_skill"])
         self.assertEqual(result.name, "jiuyuan_skill")
 
-    def test_tag_request_stops_failure_entry_action_chain(self):
+    def test_tag_request_stops_failed_entry_flow(self):
         calls = []
         source = FakeChar(0, "source")
         current = FakeChar(
             1,
             "jiuyuan",
-            intents=lambda _: [
+            plan_items=lambda _: [
                 ActionIntent(
                     name="jiuyuan_ultimate",
                     tags={ActionTag.ULTIMATE_ACTION},
@@ -637,7 +684,7 @@ class TestCombatPlanner(unittest.TestCase):
         char = FakeChar(
             0,
             "nanally",
-            intents=lambda _: [
+            plan_items=lambda _: [
                 self._action(
                     "nanally_skill",
                     {ActionTag.SKILL_ACTION},
@@ -664,7 +711,7 @@ class TestCombatPlanner(unittest.TestCase):
         nanally = FakeChar(
             1,
             "nanally",
-            intents=lambda _: [
+            plan_items=lambda _: [
                 self._action("nanally_skill", {ActionTag.SKILL_ACTION}, ActionSlot.SKILL),
                 self._action(
                     "nanally_ultimate",
@@ -723,6 +770,89 @@ class TestCombatPlanner(unittest.TestCase):
         self.assertGreater(decision.priority, baseline.priority)
         self.assertIn("fulfill request", decision.reason)
 
+    def test_active_request_result_replays_into_entry_flow(self):
+        calls = []
+        source = FakeChar(0, "source")
+        support = self._action(
+            "support_action",
+            {ActionTag.SUPPORT},
+            ActionSlot.SKILL,
+            calls,
+        )
+        followup = self._action(
+            "support_followup",
+            {ActionTag.DEFAULT_ACTION},
+            None,
+            calls,
+        )
+
+        def entry():
+            support_result = yield support
+            if support_result:
+                yield followup
+
+        target = FakeChar(
+            1,
+            "support",
+            plan_items=lambda _: CombatPlan([support, followup], entry=entry),
+        )
+        planner = self._planner([source, target])
+        self._publish(
+            planner,
+            source,
+            lambda context: context.request_tags(
+                {ActionTag.SUPPORT},
+                reason="needs support",
+            ),
+        )
+
+        result = planner.perform_current_char(target)
+
+        self.assertEqual(calls, ["support_action", "support_followup"])
+        self.assertEqual(result.name, "support_followup")
+
+    def test_active_request_still_blocks_entry_flow_when_unfulfilled(self):
+        calls = []
+        source = FakeChar(0, "source")
+        support = self._action(
+            "support_action",
+            {ActionTag.SUPPORT},
+            ActionSlot.SKILL,
+            calls,
+        )
+        followup = self._action(
+            "support_followup",
+            {ActionTag.DEFAULT_ACTION},
+            None,
+            calls,
+        )
+
+        def entry():
+            support_result = yield support
+            if support_result:
+                yield followup
+
+        target = FakeChar(
+            1,
+            "support",
+            plan_items=lambda _: CombatPlan([support, followup], entry=entry),
+        )
+        planner = self._planner([source, target])
+        self._publish(
+            planner,
+            source,
+            lambda context: context.request_tags(
+                {ActionTag.SUPPORT},
+                count=2,
+                reason="needs two supports",
+            ),
+        )
+
+        result = planner.perform_current_char(target)
+
+        self.assertEqual(calls, ["support_action"])
+        self.assertEqual(result.name, "support_action")
+
     def test_entry_flow_can_stop_after_success(self):
         calls = []
         ultimate = self._action(
@@ -743,7 +873,7 @@ class TestCombatPlanner(unittest.TestCase):
             if not ultimate_result:
                 yield skill
 
-        char = FakeChar(0, "fadia", intents=lambda _: CombatPlan([ultimate, skill], entry=entry))
+        char = FakeChar(0, "fadia", plan_items=lambda _: CombatPlan([ultimate, skill], entry=entry))
         planner = self._planner([char])
 
         result = planner.perform_current_char(char)
@@ -772,7 +902,7 @@ class TestCombatPlanner(unittest.TestCase):
             if not ultimate_result:
                 yield skill
 
-        char = FakeChar(0, "fadia", intents=lambda _: CombatPlan([ultimate, skill], entry=entry))
+        char = FakeChar(0, "fadia", plan_items=lambda _: CombatPlan([ultimate, skill], entry=entry))
         planner = self._planner([char])
 
         result = planner.perform_current_char(char)
@@ -780,12 +910,108 @@ class TestCombatPlanner(unittest.TestCase):
         self.assertEqual(calls, ["fadia_ultimate", "fadia_skill"])
         self.assertEqual(result.name, "fadia_skill")
 
-    def test_action_result_tags_do_not_control_entry_chain(self):
+    def test_expected_entry_result_replays_into_entry_flow(self):
+        calls = []
+        ultimate = self._action(
+            "fadia_ultimate",
+            {ActionTag.ULTIMATE_ACTION},
+            ActionSlot.ULTIMATE,
+            calls,
+        )
+        skill = self._action(
+            "fadia_skill",
+            {ActionTag.SKILL_ACTION},
+            ActionSlot.SKILL,
+            calls,
+        )
+
+        def entry():
+            ultimate_result = yield ultimate
+            if not ultimate_result:
+                yield skill
+
+        char = FakeChar(0, "fadia", plan_items=lambda _: CombatPlan([ultimate, skill], entry=entry))
+        planner = self._planner([char])
+        planner.expect_entry_action(char, ExpectedEntry(slot=ActionSlot.ULTIMATE))
+
+        result = planner.perform_current_char(char)
+
+        self.assertEqual(calls, ["fadia_ultimate"])
+        self.assertEqual(result.name, "fadia_ultimate")
+
+    def test_entry_flow_supports_python_boolean_logic(self):
+        scenarios = [
+            (
+                "and",
+                True,
+                True,
+                lambda first_result, second_result: first_result and second_result,
+            ),
+            (
+                "or",
+                False,
+                True,
+                lambda first_result, second_result: first_result or second_result,
+            ),
+            (
+                "and_not",
+                True,
+                False,
+                lambda first_result, second_result: first_result and not second_result,
+            ),
+        ]
+
+        for name, first_success, second_success, should_continue in scenarios:
+            with self.subTest(name=name):
+                calls = []
+                first = self._action(
+                    f"{name}_first",
+                    {ActionTag.DEFAULT_ACTION},
+                    None,
+                    calls,
+                    success=first_success,
+                )
+                second = self._action(
+                    f"{name}_second",
+                    {ActionTag.DEFAULT_ACTION},
+                    None,
+                    calls,
+                    success=second_success,
+                )
+                followup = self._action(
+                    f"{name}_followup",
+                    {ActionTag.DEFAULT_ACTION},
+                    None,
+                    calls,
+                )
+
+                def entry():
+                    first_result = yield first
+                    second_result = yield second
+                    if should_continue(first_result, second_result):
+                        yield followup
+
+                char = FakeChar(
+                    0,
+                    f"logic_{name}",
+                    plan_items=lambda _: CombatPlan([first, second, followup], entry=entry),
+                )
+                planner = self._planner([char])
+
+                result = planner.perform_current_char(char)
+
+                self.assertEqual(
+                    calls,
+                    [f"{name}_first", f"{name}_second", f"{name}_followup"],
+                )
+                self.assertEqual(result.name, f"{name}_followup")
+
+    def test_action_result_tags_do_not_control_entry_flow(self):
         calls = []
         char = FakeChar(
             0,
-            "chain",
-            intents=lambda _: [
+            "entry_flow",
+            plan_items=lambda _: [
                 ActionIntent(
                     name="first",
                     tags={ActionTag.SKILL_ACTION},
@@ -1000,7 +1226,7 @@ class TestCombatPlanner(unittest.TestCase):
         char = FakeChar(
             0,
             "combo",
-            intents=lambda _: [
+            plan_items=lambda _: [
                 self._action(
                     "combo_ultimate",
                     {ActionTag.ULTIMATE_ACTION},
@@ -1020,14 +1246,14 @@ class TestCombatPlanner(unittest.TestCase):
         planner.perform_current_char(char)
 
         self.assertEqual(calls, ["combo_ultimate", "combo_skill"])
-        self.assertEqual(char.intent_calls, 1)
+        self.assertEqual(char.plan_calls, 1)
 
     def test_pending_entry_action_runs_before_replanning_field_time(self):
         calls = []
         char = FakeChar(
             0,
             "jiuyuan",
-            intents=lambda _: [
+            plan_items=lambda _: [
                 self._action(
                     "jiuyuan_ultimate",
                     {ActionTag.ULTIMATE_ACTION},
@@ -1167,12 +1393,12 @@ class TestCombatPlanner(unittest.TestCase):
         self.assertEqual(decision.target, live_support)
         self.assertIn("live required E", decision.reason)
 
-    def test_request_route_chains_same_target_steps_in_one_entry(self):
+    def test_strict_route_runs_same_target_steps_in_one_entry(self):
         calls = []
         char = FakeChar(
             1,
             "jiuyuan",
-            intents=lambda _: [
+            plan_items=lambda _: [
                 self._action(
                     "jiuyuan_ultimate",
                     {ActionTag.ULTIMATE_ACTION},
@@ -1205,12 +1431,53 @@ class TestCombatPlanner(unittest.TestCase):
         self.assertEqual(calls, ["jiuyuan_ultimate", "jiuyuan_skill"])
         self.assertEqual(result.name, "jiuyuan_skill")
 
+    def test_strict_route_final_step_continues_target_entry_flow(self):
+        calls = []
+        source = FakeChar(0, "xun")
+        skill = self._action(
+            "nanally_skill",
+            {ActionTag.SKILL_ACTION},
+            ActionSlot.SKILL,
+            calls,
+        )
+        ultimate = self._action(
+            "nanally_ultimate",
+            {ActionTag.ULTIMATE_ACTION},
+            ActionSlot.ULTIMATE,
+            calls,
+        )
+
+        def entry():
+            skill_result = yield skill
+            if skill_result:
+                yield ultimate
+
+        nanally = FakeChar(
+            1,
+            "nanally",
+            plan_items=lambda _: CombatPlan([skill, ultimate], entry=entry),
+        )
+        planner = self._planner([source, nanally])
+        self._publish(
+            planner,
+            source,
+            lambda context: context.request_route(
+                [FollowupStep.for_action(nanally, ActionSlot.SKILL, reason="Nanally E")],
+                reason="xun route ends on Nanally",
+            ),
+        )
+
+        result = planner.perform_current_char(nanally)
+
+        self.assertEqual(calls, ["nanally_skill", "nanally_ultimate"])
+        self.assertEqual(result.name, "nanally_ultimate")
+
     def test_request_route_skips_optional_prepare_step_when_not_ready(self):
         calls = []
         char = FakeChar(
             1,
             "zero",
-            intents=lambda _: [
+            plan_items=lambda _: [
                 self._action(
                     "zero_ultimate",
                     {ActionTag.ULTIMATE_ACTION},
@@ -1254,7 +1521,7 @@ class TestCombatPlanner(unittest.TestCase):
         char = FakeChar(
             1,
             "zero",
-            intents=lambda _: [
+            plan_items=lambda _: [
                 self._action(
                     "zero_ultimate",
                     {ActionTag.ULTIMATE_ACTION},
@@ -1333,7 +1600,7 @@ class TestCombatPlanner(unittest.TestCase):
         source = FakeChar(
             0,
             "source",
-            intents=lambda context: (
+            plan_items=lambda context: (
                 context.reserve_actions(
                     [ActionReservation.for_action(target, ActionSlot.SKILL)],
                     reason="invalid plan side effect",
@@ -1759,7 +2026,7 @@ class TestCombatPlanner(unittest.TestCase):
         self.assertIsNone(decision.expected_entry)
         self.assertIn("switch request", decision.reason)
 
-    def test_request_switch_does_not_stop_current_entry_chain(self):
+    def test_request_switch_does_not_stop_current_entry_flow(self):
         calls = []
         source = PublicApiChar(
             FakeTask(),
@@ -1770,7 +2037,7 @@ class TestCombatPlanner(unittest.TestCase):
                     tags={ActionTag.DEFAULT_ACTION},
                     execute=lambda ctx: (
                         calls.append("request")
-                        or ctx.request_switch(target, reason="switch after chain")
+                        or ctx.request_switch(target, reason="switch after entry flow")
                         or True
                     ),
                     reason="publish switch request",
@@ -1778,7 +2045,7 @@ class TestCombatPlanner(unittest.TestCase):
                 char.planner_action(
                     tags={ActionTag.DEFAULT_ACTION},
                     execute=lambda _: calls.append("second") or True,
-                    reason="continue current chain",
+                    reason="continue current entry flow",
                 ),
             ),
         )

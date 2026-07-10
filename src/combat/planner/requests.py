@@ -251,8 +251,8 @@ def request_counts_as_active(request: _Request) -> bool:
     )
 
 
-def request_blocks_entry_chain(request: _Request) -> bool:
-    """判断请求是否需要打断当前角色的入场动作链。
+def request_blocks_entry_flow(request: _Request) -> bool:
+    """判断请求是否需要打断当前角色的入场动作流。
 
     纯 reservation 只负责禁止指定动作，不代表 planner 需要重新调度，因此不应
     阻止当前角色继续尝试下一个 allowed action。
