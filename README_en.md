@@ -137,6 +137,9 @@ To ensure the program runs stably, please carefully read the following configura
 >     *   Recommended to use **1920x1080** or higher **16:9** resolutions.
 > *   **Keybindings**
 >     *   Please use the game's **default** keybindings.
+> *   **Camera Settings**
+>     *   **Movement Camera Correction**: Disabled
+>     *   **Press to Reset Camera**: Enabled
 > *   **Third-party Software**
 >     *   Disable any overlays that display information on the game screen, such as the **framerate counter** from MSI Afterburner.
 
