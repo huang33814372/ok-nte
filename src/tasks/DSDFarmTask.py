@@ -78,6 +78,7 @@ class DSDFarmTask(NTEOneTimeTask, BaseCombatTask):
         self.combat_detect_policy.miss_required = 3
         self.combat_detect_policy.uncertain_seconds = 2
         self.do_teleport_on_spot = False
+        self.team_dead = False
 
     def run(self):
         self.sleep_check_skip.all = True
@@ -151,11 +152,7 @@ class DSDFarmTask(NTEOneTimeTask, BaseCombatTask):
         if self.walk_until_combat(run=True, delay=1):
             self.deside_combat_action()
         self.sleep(0.5)
-        while True:
-            if self.teleport_to_nearest_bonfire():
-                break
-            self.ensure_main()
-            self.sleep(0.5)
+        self.ensure_teleport(lambda: self.teleport_to_nearest_bonfire())
 
     def location_1(self):
         self.send_key_down("w")
@@ -185,11 +182,7 @@ class DSDFarmTask(NTEOneTimeTask, BaseCombatTask):
             self.deside_combat_action()
         self.sleep(0.5)
         box = self.box_of_screen(0.498, 0.102, 0.931, 0.827)
-        while True:
-            if self.teleport_to_top_bonfire(box):
-                break
-            self.ensure_main()
-            self.sleep(0.5)
+        self.ensure_teleport(lambda: self.teleport_to_top_bonfire(box))
 
     def location_2(self):
         self.send_key_down("w")
@@ -205,11 +198,16 @@ class DSDFarmTask(NTEOneTimeTask, BaseCombatTask):
             self.deside_combat_action()
         self.sleep(0.5)
         box = self.box_of_screen(0.410, 0.234, 0.560, 0.556)
+        self.do_teleport_on_spot = True
+        self.ensure_teleport(lambda: self.teleport_to_top_bonfire(box))
+
+    def ensure_teleport(self, fun):
+        if self.team_dead:
+            fun = self.teleport_on_spot
         switch = False
         while True:
-            if self.teleport_to_top_bonfire(box):
-                self.do_teleport_on_spot = True
-                break
+            if fun():
+                return True
             self.ensure_main()
             self.sleep(0.5)
             key = "w" if switch else "s"
@@ -235,7 +233,13 @@ class DSDFarmTask(NTEOneTimeTask, BaseCombatTask):
                     self.switch_to_combat_start_char = action
                     self.switch_other_char = lambda *args, **kwargs: True
 
-                return self.combat_once(max_combat_time=max_combat_time)
+                self.combat_once(max_combat_time=max_combat_time)
+                self.team_dead = False
+                while not self.is_in_team():
+                    self.team_dead = True
+                    self.operate_click(0.501, 0.777, after_sleep=0.5)
+                    self.send_key("esc", after_sleep=2)
+                    self.next_frame()
             finally:
                 if dont_switch:
                     self.switch_next_char = old_switch
