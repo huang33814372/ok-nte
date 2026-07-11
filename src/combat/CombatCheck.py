@@ -42,8 +42,8 @@ class CombatDetectResult:
 @dataclass(slots=True)
 class CombatDetectPolicy:
     miss_required: int = 1
-    uncertain_seconds: float = 0.4
-    retarget_settle_seconds: float = 0.3
+    uncertain_seconds: float = 0.5
+    retarget_settle_seconds: float = 0.4
 
 
 @dataclass
@@ -529,7 +529,7 @@ class CombatCheck(BaseNTETask):
                 exhaustive=exhaustive,
                 force=force,
             )
-            self._log_async_combat_detect_pending(result)
+            # self._log_async_combat_detect_pending(result)
             return result
 
         return CombatDetectResult(
