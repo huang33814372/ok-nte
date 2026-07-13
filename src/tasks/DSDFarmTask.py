@@ -1,3 +1,5 @@
+import time
+
 from ok import TaskDisabledException
 from qfluentwidgets import FluentIcon
 
@@ -43,6 +45,7 @@ class DSDFarmTask(NTEOneTimeTask, BaseCombatTask):
     CONF_USE_ULT = "使用终结技"
     CONF_DONT_SWITCH = "战斗时不切人"
     CONF_MAX_COMBAT_TIME = "战斗时长上限"
+    CONF_WAIT_FULL_DURATION = "战斗后等待至时长上限"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -63,6 +66,7 @@ class DSDFarmTask(NTEOneTimeTask, BaseCombatTask):
                 self.CONF_USE_ULT: True,
                 self.CONF_DONT_SWITCH: False,
                 self.CONF_MAX_COMBAT_TIME: 1200,
+                self.CONF_WAIT_FULL_DURATION: False
             }
         )
 
@@ -236,6 +240,7 @@ class DSDFarmTask(NTEOneTimeTask, BaseCombatTask):
                     self.switch_to_combat_start_char = action
                     self.switch_other_char = lambda *args, **kwargs: True
 
+                start_combat = time.time()
                 self.combat_once(max_combat_time=max_combat_time)
                 self.team_dead = False
                 while not self.is_in_team():
@@ -243,6 +248,13 @@ class DSDFarmTask(NTEOneTimeTask, BaseCombatTask):
                     self.operate_click(0.501, 0.777, after_sleep=0.5)
                     self.send_key("esc", after_sleep=2)
                     self.next_frame()
+                if self.team_dead:
+                    return
+                if self.config.get(self.CONF_WAIT_FULL_DURATION):
+                    remaining_time = max_combat_time - (time.time() - start_combat)
+                    if remaining_time > 0:
+                        self.log_info(f"战斗提前结束，原地等待 {remaining_time:.1f} 秒以补齐时长上限。")
+                        self.sleep(remaining_time)
             finally:
                 if dont_switch:
                     self.switch_next_char = old_switch
