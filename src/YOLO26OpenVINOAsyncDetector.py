@@ -4,6 +4,7 @@ import time
 
 import numpy as np
 from ok import Box, Logger, og
+from ok.gui.Communicate import communicate
 
 logger = Logger.get_logger(__name__)
 
@@ -22,7 +23,8 @@ class YOLO26OpenVINOAsyncDetector:
                 "当前 CPU 不支持 AVX2, 无法运行 OpenVINO 2026 CPU 推理；"
                 "自动战斗的目标检测将不可用。"
             )
-            logger.error(message, notify=True)
+            logger.error(message)
+            communicate.notification.emit(message, "OpenVINO", False, True, None, None)
             self.latest_results = False
             self.latest_image = None
             self.latency = 0.0
