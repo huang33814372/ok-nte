@@ -368,7 +368,7 @@ class BaseCombatTask(CharElementUIMixin, CombatCheck):
             except NotInCombatException as e:
                 logger.info(f"combat_once out of combat break {e}")
         self.combat_end()
-        self.wait_in_team_and_world(time_out=10, raise_if_not_found=False)
+        self.wait_in_team(time_out=10, raise_if_not_found=False)
 
     def _get_char_log_name(self, char: "BaseChar"):
         if hasattr(char, "char_name"):

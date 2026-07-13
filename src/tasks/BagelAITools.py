@@ -248,7 +248,7 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
                     self.sleep(1.14)
                     continue
                 else:
-                    if self.in_team_and_world():
+                    if self.is_in_team():
                         self.log_info("🔴 检测在大世界，呗果文案助手自动暂停！")
                         self.is_running = False
                         continue
