@@ -21,9 +21,11 @@ from src.utils.log_gate import LogGateMixin
 
 logger = Logger.get_logger(__name__)
 stamina_re = re.compile(r"(\d+)/(\d+)")
-MSG_MAIN_DETECTION_FAILED = ("主界面检测失败。建议操作: \n"
-                             "1. 关闭显卡滤镜与锐化功能；\n"
-                             "2. 尝试开启 Windows “自动管理应用的颜色”设置。")
+MSG_MAIN_DETECTION_FAILED = (
+    "主界面检测失败。建议操作: \n"
+    "1. 关闭显卡滤镜与锐化功能；\n"
+    "2. 尝试开启 Windows “自动管理应用的颜色”设置。"
+)
 MSG_WORLD_DETECTION_FAILED = "大世界检测失败: 请检查游戏内 UI 透明度是否已设置为 1.0。"
 
 
@@ -837,6 +839,11 @@ class BaseNTETask(CharUIMixin, MovementMixin, VisionMixin, OgMixin, LogGateMixin
             return og.app.locale.name()
         except Exception:
             return None
+
+    def is_chinese(self) -> bool:
+        """判断当前应用语言是否为中文"""
+
+        return "zh" in self.get_app_locale()
 
     def open_f1_domain_page(self):
         self.openF1panel()

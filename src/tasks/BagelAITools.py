@@ -55,7 +55,7 @@ class BagelAITools(NTEOneTimeTask, BaseNTETask):
         self.name = "呗果智能体"
         self.description = "请详阅使用说明"
         self.icon = FluentIcon.HEART
-        self.instructions = INS if "zh" in self.get_app_locale() else EN_INS
+        self.instructions = INS if self.is_chinese() else EN_INS
         self.bagel_supported_languages = [
             "zh_CN",
             "zh_TW",

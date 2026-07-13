@@ -36,7 +36,6 @@ EN_INST = (
     f"{SPACE}There are only three checkpoints near Silken Alley; this is the only indoor one.\n"
     f"{SPACE}Recommended for NG++ (3rd playthrough), mainly for farming Buttons."
 )
-# ruff: noqa
 
 
 class DSDFarmTask(NTEOneTimeTask, BaseCombatTask):

@@ -3,15 +3,27 @@ import time
 from ok import TaskDisabledException, og
 from qfluentwidgets import FluentIcon
 
+from src.tasks.BaseNTETask import BaseNTETask
 from src.tasks.NTEOneTimeTask import NTEOneTimeTask
-from src.tasks.RecordTask import RecordTask
 from src.ui.util import show_dialog_and_wait, tr_fmt
 
-RECORD_INS = (
-    "记录点击目标关卡的操作，分为两个步骤：\n"
-    "1. 使用滚轮滚动至[目标关卡]可见 (若不需要则点击[目标关卡])\n"
-    "2. 点击目标关卡\n\n"
-    "※ 请勿点击[开始营业]"
+# noqa: E501
+INST = (
+    "功能说明：本功能仅负责『自动退出关卡』与『重新开启关卡』的点击循环，"
+    "不包含任何局内的制作食物或招待客人操作。\n\n"
+    "使用方法：\n"
+    "1. 确保您已配置好游戏内的挂机流派。\n"
+    "2. 打开店长特供选好你的目标关卡。\n"
+    "3. 点击[开始]"
+)
+
+EN_INST = (
+    "Feature notes: This feature only handles the click loop for automatically exiting the stage and restarting the stage."
+    "It does not perform any in-stage food preparation or customer service actions.\n\n"
+    "How to use:\n"
+    "1. Make sure you have configured your in-game AFK build.\n"
+    "2. Open Owner Selection and select your target level.\n"
+    "3. On the first launch, you need to record the target. Click [Start], then follow the prompts."
 )
 
 ROB_MODE_HINT = (
@@ -21,7 +33,7 @@ ROB_MODE_HINT = (
 )
 
 
-class OwnerSelectionTask(NTEOneTimeTask, RecordTask):
+class OwnerSelectionTask(NTEOneTimeTask, BaseNTETask):
     CONF_ROB = "抢钱流"
     CONF_CORDS = "记录坐标"
 
@@ -39,21 +51,12 @@ class OwnerSelectionTask(NTEOneTimeTask, RecordTask):
         super().__init__(*args, **kwargs)
         self.name = "店长特供"
         self.description = "自动循环进出关卡（需配合游戏内挂机流派使用）"
-        self.instructions = og.app.tr(
-            "功能说明：本功能仅负责『自动退出关卡』与『重新开启关卡』的点击循环，"
-            "不包含任何局内的制作食物或招待客人操作。\n\n"
-            "使用方法：\n"
-            "1. 确保您已配置好游戏内的挂机流派。\n"
-            "2. 站在咖啡店可进行 F 交互的位置。\n"
-            "3. 首次启动需录制目标, 点击[开始]后请跟随指示操作。"
-        )
+        self.instructions = INST if self.is_chinese() else EN_INST
         self.icon = FluentIcon.CAFE
         self.group_name = "都市闲趣"
         self.group_icon = FluentIcon.GAME
         self.add_rounds_config()
         self.default_config.update({self.CONF_ROB: False})
-        self.tr(RECORD_INS)
-        self.tr(ROB_MODE_HINT)
 
     def run(self):
         super().run()
@@ -133,8 +136,6 @@ class OwnerSelectionTask(NTEOneTimeTask, RecordTask):
             raise_if_not_found=True,
             settle_time=0.25,
         )
-        self.sleep(1)
-        self.record_or_replay_operations(2, instruction_text=self.tr(RECORD_INS))
         self.sleep(1)
         # 步骤2：点击开始玩法
         self.info_set("当前阶段", "开始玩法")
