@@ -1134,3 +1134,9 @@ msgstr ""
 
 msgid "请先捕获、选择礼物并启用至少一个角色。"
 msgstr ""
+
+msgid "使用录制功能"
+msgstr ""
+
+msgid "启用后录制并回放选择目标关卡的操作"
+msgstr ""

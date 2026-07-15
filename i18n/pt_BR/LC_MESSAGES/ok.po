@@ -885,3 +885,9 @@ msgstr "Nenhuma tela do jogo disponível"
 
 msgid "请先捕获、选择礼物并启用至少一个角色。"
 msgstr "Por favor, capture, selecione presentes e ative pelo menos um personagem primeiro."
+
+msgid "使用录制功能"
+msgstr "Usar recurso de gravação"
+
+msgid "启用后录制并回放选择目标关卡的操作"
+msgstr "Quando ativado, grava e reproduz as ações usadas para selecionar a fase alvo"

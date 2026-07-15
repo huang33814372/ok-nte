@@ -1145,3 +1145,9 @@ msgstr "No game screen available"
 
 msgid "请先捕获、选择礼物并启用至少一个角色。"
 msgstr "Please capture, select gifts, and enable at least one character first."
+
+msgid "使用录制功能"
+msgstr "Use recording feature"
+
+msgid "启用后录制并回放选择目标关卡的操作"
+msgstr "When enabled, records and replays the actions used to select the target level"

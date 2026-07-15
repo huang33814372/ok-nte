@@ -1145,3 +1145,9 @@ msgstr "No hay pantalla de juego disponible"
 
 msgid "请先捕获、选择礼物并启用至少一个角色。"
 msgstr "Por favor, capture, seleccione regalos y habilite al menos un personaje primero."
+
+msgid "使用录制功能"
+msgstr "Usar función de grabación"
+
+msgid "启用后录制并回放选择目标关卡的操作"
+msgstr "Al activarlo, graba y reproduce las acciones para seleccionar el nivel objetivo"
