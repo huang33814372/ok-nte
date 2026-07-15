@@ -240,7 +240,7 @@ msgid "更新"
 msgstr "更新"
 
 msgid "未启用"
-msgstr "未有効"
+msgstr "無効"
 
 msgid "未能识别该特征"
 msgstr "特徴を認識できませんでした"
@@ -1070,3 +1070,78 @@ msgstr "現在のCPUはAVX2をサポートしていないため、OpenVINO 2026 
 
 msgid "战斗后等待至时长上限"
 msgstr "戦闘後に最大時間まで待機"
+
+msgid "羁遇赠礼"
+msgstr "絆の贈り物"
+
+msgid "新增角色"
+msgstr "キャラクターを追加"
+
+msgid "更新当前角色"
+msgstr "現在のキャラクターを更新"
+
+msgid "删除当前角色"
+msgstr "現在のキャラクターを削除"
+
+msgid "开始赠礼"
+msgstr "ギフト開始"
+
+msgid "继续赠礼"
+msgstr "ギフト再開"
+
+msgid "停止"
+msgstr "停止"
+
+msgid "在游戏赠礼页点击{}。点击礼物卡片可设定优先级，再次点击取消。"
+msgstr "ゲームのギフトページで{}をクリックします。ギフトカードをクリックして優先度を設定し、もう一度クリックするとキャンセルします。"
+
+msgid "赠礼状态"
+msgstr "ギフト状態"
+
+msgid "已启用"
+msgstr "有効"
+
+msgid "名称"
+msgstr "名前"
+
+msgid "角色显示名称"
+msgstr "キャラクター表示名"
+
+msgid "赠送次数"
+msgstr "贈呈回数"
+
+msgid "角色名称"
+msgstr "キャラクター名"
+
+msgid "礼物优先级"
+msgstr "ギフト優先度"
+
+msgid "不赠送"
+msgstr "ギフトしない"
+
+msgid "优先级 {}"
+msgstr "優先度 {}"
+
+msgid "不可赠送"
+msgstr "ギフト不可"
+
+msgid "未命名角色"
+msgstr "名前なしキャラクター"
+
+msgid "捕获失败"
+msgstr "キャプチャ失敗"
+
+msgid "保存失败"
+msgstr "保存失敗"
+
+msgid "无法开始"
+msgstr "開始できません"
+
+msgid "赠礼任务未注册"
+msgstr "ギフトタスクが未登録です"
+
+msgid "没有可用的游戏画面"
+msgstr "利用可能なゲーム画面がありません"
+
+msgid "请先捕获、选择礼物并启用至少一个角色。"
+msgstr "最初にキャプチャし、ギフトを選択して、少なくとも1つのキャラクターを有効にしてください。"

@@ -1059,3 +1059,78 @@ msgstr ""
 
 msgid "战斗后等待至时长上限"
 msgstr ""
+
+msgid "羁遇赠礼"
+msgstr ""
+
+msgid "新增角色"
+msgstr ""
+
+msgid "更新当前角色"
+msgstr ""
+
+msgid "删除当前角色"
+msgstr ""
+
+msgid "开始赠礼"
+msgstr ""
+
+msgid "继续赠礼"
+msgstr ""
+
+msgid "停止"
+msgstr ""
+
+msgid "在游戏赠礼页点击{}。点击礼物卡片可设定优先级，再次点击取消。"
+msgstr ""
+
+msgid "赠礼状态"
+msgstr ""
+
+msgid "已启用"
+msgstr ""
+
+msgid "名称"
+msgstr ""
+
+msgid "角色显示名称"
+msgstr ""
+
+msgid "赠送次数"
+msgstr ""
+
+msgid "角色名称"
+msgstr ""
+
+msgid "礼物优先级"
+msgstr ""
+
+msgid "不赠送"
+msgstr ""
+
+msgid "优先级 {}"
+msgstr ""
+
+msgid "不可赠送"
+msgstr ""
+
+msgid "未命名角色"
+msgstr ""
+
+msgid "捕获失败"
+msgstr ""
+
+msgid "保存失败"
+msgstr ""
+
+msgid "无法开始"
+msgstr ""
+
+msgid "赠礼任务未注册"
+msgstr ""
+
+msgid "没有可用的游戏画面"
+msgstr ""
+
+msgid "请先捕获、选择礼物并启用至少一个角色。"
+msgstr ""

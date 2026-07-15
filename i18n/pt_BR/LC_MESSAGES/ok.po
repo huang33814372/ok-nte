@@ -252,7 +252,7 @@ msgid "更新"
 msgstr "Atualizar"
 
 msgid "未启用"
-msgstr "Não Ativado"
+msgstr "Desativado"
 
 msgid "未能识别该特征"
 msgstr "Não foi possível identificar esta característica"
@@ -807,3 +807,81 @@ msgstr "A CPU atual não suporta AVX2, portanto a inferência de CPU do OpenVINO
 
 msgid "战斗后等待至时长上限"
 msgstr "Aguardar até o tempo limite após o combate"
+
+msgid "羁遇赠礼"
+msgstr "Presentes de vínculo"
+
+msgid "新增角色"
+msgstr "Adicionar personagem"
+
+msgid "更新当前角色"
+msgstr "Atualizar personagem atual"
+
+msgid "删除当前角色"
+msgstr "Excluir personagem atual"
+
+msgid "开始赠礼"
+msgstr "Iniciar presentes"
+
+msgid "继续赠礼"
+msgstr "Continuar presentes"
+
+msgid "停止"
+msgstr "Parar"
+
+msgid "在游戏赠礼页点击{}。点击礼物卡片可设定优先级，再次点击取消。"
+msgstr "Clique em {} na página de presentes do jogo. Clique em um cartão de presente para definir a prioridade, clique novamente para cancelar."
+
+msgid "赠礼状态"
+msgstr "Status de presentes"
+
+msgid "已启用"
+msgstr "Ativado"
+
+msgid "名称"
+msgstr "Nome"
+
+msgid "角色显示名称"
+msgstr "Nome de exibição do personagem"
+
+msgid "赠送次数"
+msgstr "Quantidade de presentes"
+
+msgid "角色名称"
+msgstr "Nome do personagem"
+
+msgid "礼物优先级"
+msgstr "Prioridade do presente"
+
+msgid "不赠送"
+msgstr "Não presentear"
+
+msgid "优先级 {}"
+msgstr "Prioridade {}"
+
+msgid "不可赠送"
+msgstr "Não presenteável"
+
+msgid "未命名角色"
+msgstr "Personagem sem nome"
+
+msgid "捕获失败"
+msgstr "Falha na captura"
+
+msgid "保存失败"
+msgstr "Falha ao salvar"
+
+msgid "无法开始"
+msgstr "Não é possível iniciar"
+
+msgid "赠礼任务未注册"
+msgstr "Tarefa de presentes não registrada"
+
+msgid "no_screen"
+msgstr "Nenhuma tela do jogo disponível"
+
+msgid "没有可用的游戏画面"
+msgstr "Nenhuma tela do jogo disponível"
+
+msgid "请先捕获、选择礼物并启用至少一个角色。"
+msgstr "Por favor, capture, selecione presentes e ative pelo menos um personagem primeiro."

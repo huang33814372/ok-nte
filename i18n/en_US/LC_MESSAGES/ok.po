@@ -240,7 +240,7 @@ msgid "更新"
 msgstr "Update"
 
 msgid "未启用"
-msgstr "Not Enabled"
+msgstr "Disabled"
 
 msgid "未能识别该特征"
 msgstr "Failed to identify this feature"
@@ -1070,3 +1070,78 @@ msgstr "The current CPU does not support AVX2, so OpenVINO 2026 CPU inference ca
 
 msgid "战斗后等待至时长上限"
 msgstr "Wait until max duration after combat"
+
+msgid "羁遇赠礼"
+msgstr "Bond Gifts"
+
+msgid "新增角色"
+msgstr "Add Character"
+
+msgid "更新当前角色"
+msgstr "Update Current Character"
+
+msgid "删除当前角色"
+msgstr "Delete Current Character"
+
+msgid "开始赠礼"
+msgstr "Start Gifting"
+
+msgid "继续赠礼"
+msgstr "Continue Gifting"
+
+msgid "停止"
+msgstr "Stop"
+
+msgid "在游戏赠礼页点击{}。点击礼物卡片可设定优先级，再次点击取消。"
+msgstr "Click {} on the game gifting page. Click a gift card to set its priority, and click again to cancel."
+
+msgid "赠礼状态"
+msgstr "Gifting Status"
+
+msgid "已启用"
+msgstr "Enabled"
+
+msgid "名称"
+msgstr "Name"
+
+msgid "角色显示名称"
+msgstr "Character Display Name"
+
+msgid "赠送次数"
+msgstr "Gift Count"
+
+msgid "角色名称"
+msgstr "Character Name"
+
+msgid "礼物优先级"
+msgstr "Gift Priority"
+
+msgid "不赠送"
+msgstr "Do Not Gift"
+
+msgid "优先级 {}"
+msgstr "Priority {}"
+
+msgid "不可赠送"
+msgstr "Ungiftable"
+
+msgid "未命名角色"
+msgstr "Unnamed Character"
+
+msgid "捕获失败"
+msgstr "Capture Failed"
+
+msgid "保存失败"
+msgstr "Save Failed"
+
+msgid "无法开始"
+msgstr "Cannot Start"
+
+msgid "赠礼任务未注册"
+msgstr "Gifting task not registered"
+
+msgid "没有可用的游戏画面"
+msgstr "No game screen available"
+
+msgid "请先捕获、选择礼物并启用至少一个角色。"
+msgstr "Please capture, select gifts, and enable at least one character first."

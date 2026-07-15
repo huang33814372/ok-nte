@@ -240,7 +240,7 @@ msgid "更新"
 msgstr "Actualizar"
 
 msgid "未启用"
-msgstr "No activado"
+msgstr "Deshabilitado"
 
 msgid "未能识别该特征"
 msgstr "No se pudo identificar esta característica"
@@ -1070,3 +1070,78 @@ msgstr "La CPU actual no admite AVX2, por lo que no se puede ejecutar la inferen
 
 msgid "战斗后等待至时长上限"
 msgstr "Esperar hasta la duración máxima después del combate"
+
+msgid "羁遇赠礼"
+msgstr "Regalos de vínculo"
+
+msgid "新增角色"
+msgstr "Añadir personaje"
+
+msgid "更新当前角色"
+msgstr "Actualizar personaje actual"
+
+msgid "删除当前角色"
+msgstr "Eliminar personaje actual"
+
+msgid "开始赠礼"
+msgstr "Comenzar regalos"
+
+msgid "继续赠礼"
+msgstr "Continuar regalos"
+
+msgid "停止"
+msgstr "Detener"
+
+msgid "在游戏赠礼页点击{}。点击礼物卡片可设定优先级，再次点击取消。"
+msgstr "Haga clic en {} en la página de regalos del juego. Haga clic en una tarjeta de regalo para establecer la prioridad, haga clic de nuevo para cancelar."
+
+msgid "赠礼状态"
+msgstr "Estado de regalos"
+
+msgid "已启用"
+msgstr "Habilitado"
+
+msgid "名称"
+msgstr "Nombre"
+
+msgid "角色显示名称"
+msgstr "Nombre mostrado del personaje"
+
+msgid "赠送次数"
+msgstr "Cantidad de regalos"
+
+msgid "角色名称"
+msgstr "Nombre del personaje"
+
+msgid "礼物优先级"
+msgstr "Prioridad de regalos"
+
+msgid "不赠送"
+msgstr "No regalar"
+
+msgid "优先级 {}"
+msgstr "Prioridad {}"
+
+msgid "不可赠送"
+msgstr "No regalable"
+
+msgid "未命名角色"
+msgstr "Personaje sin nombre"
+
+msgid "捕获失败"
+msgstr "Error de captura"
+
+msgid "保存失败"
+msgstr "Error al guardar"
+
+msgid "无法开始"
+msgstr "No se puede comenzar"
+
+msgid "赠礼任务未注册"
+msgstr "Tarea de regalos no registrada"
+
+msgid "没有可用的游戏画面"
+msgstr "No hay pantalla de juego disponible"
+
+msgid "请先捕获、选择礼物并启用至少一个角色。"
+msgstr "Por favor, capture, seleccione regalos y habilite al menos un personaje primero."
