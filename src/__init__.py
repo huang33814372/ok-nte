@@ -11,7 +11,7 @@ if os.path.isdir(_sys32) and not _has_sys32:
     os.environ["PATH"] = _path_value + (os.pathsep if _path_value else "") + _sys32
 
 GAME_EXE = "HTGame.exe"
-LAUNCHER_EXE = ["NTEGame.exe", "NTEGlobalGame.exe"]
+LAUNCHER_EXE = ["NTEGame.exe", "NTEGlobalGame.exe", "NTETWGame.exe"]
 
 text_white_color = {
     "r": (244, 255),  # Red range
