@@ -1,7 +1,6 @@
 import json
 import os
 
-
 DB_SCHEMA_VERSION = 1
 
 
@@ -46,7 +45,9 @@ def normalize_profile(profile_id: str, value) -> dict | None:
         "display_name": display_name,
         "frame_id": frame_id,
         "selected_slots": [
-            slot for slot in normalize_slots(value.get("selected_slots", [])) if slot not in blocked_slots
+            slot
+            for slot in normalize_slots(value.get("selected_slots", []))
+            if slot not in blocked_slots
         ],
         "blocked_slots": blocked_slots,
         "target_count": target_count,

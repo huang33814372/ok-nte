@@ -2,8 +2,8 @@ import unittest
 from types import SimpleNamespace
 
 import numpy as np
-
 from ok import Box
+
 from src.tasks.GiftTask import GiftTask
 
 
@@ -22,7 +22,9 @@ class TestGiftTask(unittest.TestCase):
         )
         name_box = GiftTask.get_name_box(task)
         gift_boxes = GiftTask.get_gift_boxes(task)
-        self.assertEqual((name_box.x, name_box.y, name_box.width, name_box.height), (105, 17, 45, 7))
+        self.assertEqual(
+            (name_box.x, name_box.y, name_box.width, name_box.height), (105, 17, 45, 7)
+        )
         self.assertEqual(resized.shape[:2], (100, 200))
         self.assertEqual(len(gift_boxes), 10)
         self.assertEqual(gift_boxes[0].name, "gift_slot_0")
@@ -49,9 +51,11 @@ class TestGiftTask(unittest.TestCase):
         )
 
         self.assertEqual(profile_id, "profile")
-        self.assertEqual(calls[0][0], ("gift_name_profile",))
-        self.assertEqual(calls[0][1]["box"].name, "gift_character_name")
-        self.assertEqual(calls[0][1]["template"].shape[:2], (7, 45))
+        self.assertEqual(len(calls), 1)
+        ((call_args, call_kwargs),) = calls
+        self.assertEqual(call_args, ("gift_name_profile",))
+        self.assertEqual(call_kwargs["box"].name, "gift_character_name")
+        self.assertEqual(call_kwargs["template"].shape[:2], (7, 45))
 
     def test_give_profile_respects_target_and_global_limit(self):
         task = object.__new__(GiftTask)
@@ -62,8 +66,8 @@ class TestGiftTask(unittest.TestCase):
         task._read_character_gift_remaining = lambda: remaining[0]
         task._find_gift_box = lambda _profile: object()
         attempts = []
-        task._give_once = lambda _box, previous: attempts.append(previous) or (
-            remaining.__setitem__(0, remaining[0] - 1) or True
+        task._give_once = lambda _box, previous: (
+            attempts.append(previous) or (remaining.__setitem__(0, remaining[0] - 1) or True)
         )
         profile = {"display_name": "角色", "target_count": 3, "selected_slots": [0]}
         summary = {"success": 0, "skipped": [], "failed": []}
@@ -101,8 +105,12 @@ class TestGiftTask(unittest.TestCase):
         task._report = lambda _message: None
         task.screenshot = lambda _name: None
         task._read_character_gift_remaining = lambda: 1
-        task._find_gift_box = lambda _profile: self.fail("must not search gifts at the configured target")
-        task._give_once = lambda _box, _previous: self.fail("must not click at the configured target")
+        task._find_gift_box = lambda _profile: self.fail(
+            "must not search gifts at the configured target"
+        )
+        task._give_once = lambda _box, _previous: self.fail(
+            "must not click at the configured target"
+        )
         summary = {"success": 0, "skipped": [], "failed": []}
 
         GiftTask._give_profile(
@@ -138,8 +146,8 @@ class TestGiftTask(unittest.TestCase):
             {"success": 0, "skipped": [], "failed": []},
         )
 
-        self.assertEqual(clicked_slots[:5], list(GiftTask.CHARACTER_SLOT_YS))
-        self.assertEqual(
-            clicked_slots[5:],
-            [GiftTask.CHARACTER_SLOT_YS[-1]] * GiftTask.SIDEBAR_SCROLLS_PER_CHARACTER,
+        expected_clicked_slots = list(GiftTask.CHARACTER_SLOT_YS)
+        expected_clicked_slots.extend(
+            [GiftTask.CHARACTER_SLOT_YS[-1]] * GiftTask.SIDEBAR_SCROLLS_PER_CHARACTER
         )
+        self.assertEqual(clicked_slots, expected_clicked_slots)

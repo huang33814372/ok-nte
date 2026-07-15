@@ -104,11 +104,11 @@ class GiftPriorityCard(SimpleCardWidget):
             max(0, self.height() - self.caption.height() - 10),
         )
 
-    def mouseReleaseEvent(self, event) -> None:
-        clicked_here = self.rect().contains(event.position().toPoint())
-        if not self.blocked and event.button() == Qt.MouseButton.LeftButton and clicked_here:
+    def mouseReleaseEvent(self, e) -> None:
+        clicked_here = self.rect().contains(e.position().toPoint())
+        if not self.blocked and e.button() == Qt.MouseButton.LeftButton and clicked_here:
             self.slot_clicked.emit(self.slot)
-        super().mouseReleaseEvent(event)
+        super().mouseReleaseEvent(e)
 
 
 class GiftManagerTab(CustomTab):
@@ -183,7 +183,9 @@ class GiftManagerTab(CustomTab):
         layout.addWidget(TitleLabel(self.tr_name, editor))
 
         hint = BodyLabel(
-            og.app.tr("在游戏赠礼页点击{}。点击礼物卡片可设定优先级，再次点击取消。").format(og.app.tr("新增角色")),
+            og.app.tr("在游戏赠礼页点击{}。点击礼物卡片可设定优先级，再次点击取消。").format(
+                og.app.tr("新增角色")
+            ),
             editor,
         )
         hint.setWordWrap(True)
@@ -215,7 +217,9 @@ class GiftManagerTab(CustomTab):
         self.name_setting_card = SettingCard(FluentIcon.EDIT, og.app.tr("名称"), parent=settings)
         self.name_setting_card.hBoxLayout.addWidget(self.name_edit)
         self.name_setting_card.hBoxLayout.addSpacing(16)
-        self.count_setting_card = SettingCard(FluentIcon.TAG, og.app.tr("赠送次数"), parent=settings)
+        self.count_setting_card = SettingCard(
+            FluentIcon.TAG, og.app.tr("赠送次数"), parent=settings
+        )
         self.count_setting_card.hBoxLayout.addWidget(self.count_combo)
         self.count_setting_card.hBoxLayout.addSpacing(16)
         settings_layout.addWidget(self.status_setting_card)
@@ -328,9 +332,7 @@ class GiftManagerTab(CustomTab):
         frame = self.manager.load_frame(profile)
         if frame is not None:
             height, width = frame.shape[:2]
-            name_box = relative_box(
-                width, height, *GiftTask.NAME_RATIO, name="gift_character_name"
-            )
+            name_box = relative_box(width, height, *GiftTask.NAME_RATIO, name="gift_character_name")
             name_image = name_box.crop_frame(frame)
             self.name_preview.setImage(
                 cv_to_pixmap(name_image).scaled(
@@ -474,7 +476,9 @@ class GiftManagerTab(CustomTab):
 
     def _start_run(self) -> None:
         if not self.manager.get_enabled_profiles():
-            self._show_error(og.app.tr("无法开始"), og.app.tr("请先捕获、选择礼物并启用至少一个角色。"))
+            self._show_error(
+                og.app.tr("无法开始"), og.app.tr("请先捕获、选择礼物并启用至少一个角色。")
+            )
             return
         task = self._gift_task()
         if not task:

@@ -2,13 +2,13 @@ import re
 
 import cv2
 import numpy as np
-from ok import TaskDisabledException, Box
+from ok import TaskDisabledException
 from qfluentwidgets import FluentIcon
 
 from src.gifts.GiftManager import GiftManager
+from src.Labels import Labels
 from src.tasks.BaseNTETask import BaseNTETask
 from src.tasks.NTEOneTimeTask import NTEOneTimeTask
-from src.Labels import Labels
 
 
 class GiftTask(NTEOneTimeTask, BaseNTETask):
@@ -87,12 +87,13 @@ class GiftTask(NTEOneTimeTask, BaseNTETask):
 
     def _enter_gift_page_from_main(self) -> None:
         """User-owned navigation seam. Keep all game-specific route actions here."""
+
         def action():
             self.openESCpanel()
             self.operate_click(0.810, 0.708)
             self.sleep(0.5)
             return self.wait_panel(Labels.bond_panel)
-        
+
         result = self.retry_on_action(action, self.ensure_main)
         if not result:
             self.log_error("无法找到赠礼面板")
@@ -137,8 +138,12 @@ class GiftTask(NTEOneTimeTask, BaseNTETask):
         current_frame = self.frame
         if frame.shape[:2] == current_frame.shape[:2]:
             return frame
-        interpolation = cv2.INTER_AREA if frame.shape[0] > current_frame.shape[0] else cv2.INTER_CUBIC
-        return cv2.resize(frame, (current_frame.shape[1], current_frame.shape[0]), interpolation=interpolation)
+        interpolation = (
+            cv2.INTER_AREA if frame.shape[0] > current_frame.shape[0] else cv2.INTER_CUBIC
+        )
+        return cv2.resize(
+            frame, (current_frame.shape[1], current_frame.shape[0]), interpolation=interpolation
+        )
 
     def _sidebar_box(self):
         return self.box_of_screen(*self.SIDEBAR_BOX, name="gift_character_sidebar")
@@ -191,9 +196,7 @@ class GiftTask(NTEOneTimeTask, BaseNTETask):
             if not self._visit_character_slot(self.CHARACTER_SLOT_YS[-1], remaining, summary):
                 return
 
-    def _visit_character_slot(
-        self, y: float, remaining: dict[str, dict], summary: dict
-    ) -> bool:
+    def _visit_character_slot(self, y: float, remaining: dict[str, dict], summary: dict) -> bool:
         """Open one visible avatar and process it when its captured name matches."""
         if not remaining or summary["success"] >= self.MAX_TOTAL_GIFTS:
             return False
@@ -296,8 +299,10 @@ class GiftTask(NTEOneTimeTask, BaseNTETask):
         self.operate_click(*self.SEND_BUTTON)
         return bool(
             self.wait_until(
-                lambda: (remaining := self._read_character_gift_remaining()) is not None
-                and remaining < previous_count,
+                lambda: (
+                    (remaining := self._read_character_gift_remaining()) is not None
+                    and remaining < previous_count
+                ),
                 time_out=4,
                 raise_if_not_found=False,
                 settle_time=0.2,

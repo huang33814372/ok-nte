@@ -9,7 +9,6 @@ from ok import Box
 
 from src.gifts import GiftDb
 
-
 gift_manager_module = importlib.import_module("src.gifts.GiftManager")
 GiftManager = gift_manager_module.GiftManager
 

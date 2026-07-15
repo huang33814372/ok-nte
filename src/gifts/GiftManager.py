@@ -9,7 +9,6 @@ from ok import Logger, og
 
 from src.gifts import GiftDb
 
-
 logger = Logger.get_logger(__name__)
 
 GIFT_CONFIG_DIR = "gift_configs"
@@ -71,7 +70,9 @@ class GiftManager:
         blur_area = config.get("blur_area") if config else None
         if blur_area:
             blur_box = blur_area(frame.shape[1], frame.shape[0])
-            frame[blur_box.y : blur_box.y + blur_box.height, blur_box.x : blur_box.x + blur_box.width] = 0
+            frame[
+                blur_box.y : blur_box.y + blur_box.height, blur_box.x : blur_box.x + blur_box.width
+            ] = 0
         if not cv2.imwrite(str(path), frame):
             raise IOError(f"Failed to write gift capture: {path}")
 
@@ -97,10 +98,14 @@ class GiftManager:
             if profile["enabled"] and profile["selected_slots"]
         }
 
-    def create_profile(self, display_name, frame, selected_slots, target_count=3, blocked_slots=None) -> str:
+    def create_profile(
+        self, display_name, frame, selected_slots, target_count=3, blocked_slots=None
+    ) -> str:
         frame = self._normalize_capture(frame)
         blocked_slots = self._normalized_slots(blocked_slots or [])
-        slots = [slot for slot in self._normalized_slots(selected_slots) if slot not in blocked_slots]
+        slots = [
+            slot for slot in self._normalized_slots(selected_slots) if slot not in blocked_slots
+        ]
         profile_id = f"gift_{uuid.uuid4().hex}"
         profile = {
             "display_name": str(display_name).strip() or profile_id,
@@ -117,11 +122,19 @@ class GiftManager:
         return profile_id
 
     def recapture_profile(
-        self, profile_id, frame, selected_slots, target_count=3, display_name=None, blocked_slots=None
+        self,
+        profile_id,
+        frame,
+        selected_slots,
+        target_count=3,
+        display_name=None,
+        blocked_slots=None,
     ) -> None:
         frame = self._normalize_capture(frame)
         blocked_slots = self._normalized_slots(blocked_slots or [])
-        slots = [slot for slot in self._normalized_slots(selected_slots) if slot not in blocked_slots]
+        slots = [
+            slot for slot in self._normalized_slots(selected_slots) if slot not in blocked_slots
+        ]
         with self._data_lock:
             profile = self.db["profiles"].get(profile_id)
             if profile is None:
