@@ -48,7 +48,8 @@
 - **Background Operation**: Automate game actions while in the background.
 
 ### 📅 Dailies/Weeklies
-- **One-click Dailies**: Automatically complete daily routines. Supports sub-items: EXP & Beetle Coins, Ability Upgrade, Arc Ascension, Console, Cafe Tasks, and Cinema Date.
+- **One-click Dailies**: Automatically complete daily routines. Supports sub-items: EXP & Beetle Coins, Ability Upgrade, Arc Ascension, Console, Cafe Tasks, Cinema Date, and Bond Gifts.
+- **Bond Gifts**: Automatically send gifts to characters.
 
 ### 🍹 Hobbies
 - **Auto Fishing**: Fully automated fishing process.
