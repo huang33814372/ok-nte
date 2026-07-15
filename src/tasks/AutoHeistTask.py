@@ -310,9 +310,8 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
             return
         self._poll_interaction_watch()
         self._poll_character_switch()
-        if self.should_check_monthly_card():
-            if self.handle_monthly_card():
-                raise AbortException("found monthly_card")
+        if self.should_check_monthly_card() and self.handle_monthly_card():
+            raise AbortException("found monthly_card")
 
     def _update_sleep_check_interval(self):
         needs_fast_poll = (
@@ -411,6 +410,7 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
         if not self.wait_until(is_switched, pre_action=switch_action, time_out=10):
             self._switch_state = None
             self._update_sleep_check_interval()
+            self.screenshot("character_switch_failed")
             raise AbortException(f"{role} switch to {last_key} failed")
 
         state = self._switch_state
@@ -445,6 +445,7 @@ class AutoHeistTask(NTEOneTimeTask, BaseCombatTask):
             if not state.advance():
                 self._switch_state = None
                 self._update_sleep_check_interval()
+                self.screenshot("character_switch_failed")
                 raise AbortException(f"{role} {state.keys} dead or empty")
             self._send_current_switch_key()
         finally:
