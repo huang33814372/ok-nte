@@ -502,6 +502,7 @@ class BaseNTETask(CharUIMixin, MovementMixin, VisionMixin, OgMixin, LogGateMixin
             settle_time=0.5,
             raise_if_not_found=raise_if_not_found,
         )
+        self.monitor_and_sync_cursor()
         self.sleep(0.1)
         return True
 
@@ -896,6 +897,10 @@ class BaseNTETask(CharUIMixin, MovementMixin, VisionMixin, OgMixin, LogGateMixin
         ):
             return False
         return True
+
+    def monitor_and_sync_cursor(self, timeout=1):
+        if interaction := self.executor.interaction:
+            interaction.monitor_and_sync_cursor(timeout=timeout)
 
 
 def interac_mask(image):

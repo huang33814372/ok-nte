@@ -43,17 +43,22 @@ def _cursor_sync_worker(lock, state_box):
             curr_x, curr_y = cursor_pos
             abs_center_x, abs_center_y = state["center"]
             limit_x, limit_y = state["limit"]
-            target_x, target_y = state["target"]
+            last_x, last_y = state["last_cursor_position"]
             is_in_center_zone = all(
                 (abs(curr_x - abs_center_x) <= limit_x, abs(curr_y - abs_center_y) <= limit_y)
             )
-            is_far_from_target = any(
-                (abs(curr_x - target_x) > limit_x, abs(curr_y - target_y) > limit_y)
+            is_far_from_last_position = any(
+                (abs(curr_x - last_x) > limit_x, abs(curr_y - last_y) > limit_y)
             )
-            should_reset = all((is_in_center_zone, is_far_from_target))
+            should_reset = all((is_in_center_zone, is_far_from_last_position))
+
+            if not is_in_center_zone:
+                with lock:
+                    if state_box.get("state") is state:
+                        state["last_cursor_position"] = cursor_pos
 
         if all((can_check_cursor, not should_reset)):
-            time.sleep(0.001)
+            time.sleep(0.01)
             continue
 
         with lock:
@@ -62,7 +67,7 @@ def _cursor_sync_worker(lock, state_box):
             state_box["state"] = None
             state_box["thread"] = None
             if should_reset:
-                SetCursorPos(state["target"])
+                SetCursorPos(state["last_cursor_position"])
         return
 
 
@@ -285,17 +290,20 @@ class NTEInteraction(PostMessageInteraction):
             super().try_activate()
             self._next_try_activate_at = now + self._ACTIVATE_REFRESH_INTERVAL
 
-    def monitor_and_sync_cursor(self, cursor_position, timeout=2.0, threshold_ratio=0.05):
+    def monitor_and_sync_cursor(self, cursor_position=None, timeout=2.0, threshold_ratio=0.05):
         """
         在指定 timeout 时间内异步进行高频监测。
         如果鼠标回到捕获区域中心 5% 范围内且远离目标点，则强制重置。
-        
-        :param cursor_position: 预期目标坐标 (x, y)
+
+        :param cursor_position: 监测开始时的鼠标坐标，用于初始化恢复位置 (x, y)
         :param timeout: 监测持续时间（秒）
         :param threshold_ratio: 判定阈值比例，默认 0.05 (5%)
         """
-        if not cursor_position:
+        if self.hwnd_window.is_foreground():
             return
+
+        if cursor_position is None:
+            cursor_position = GetCursorPos()
 
         # --- 1. 预计算固定值（移出循环以提高频率） ---
         # 计算捕获区域的绝对中心点坐标
@@ -310,7 +318,7 @@ class NTEInteraction(PostMessageInteraction):
             "center": (abs_center_x, abs_center_y),
             "deadline": time.time() + timeout,
             "limit": (limit_x, limit_y),
-            "target": tuple(cursor_position),
+            "last_cursor_position": tuple(cursor_position),
         }
         with self._cursor_sync_lock:
             self._cursor_sync_state["state"] = state
