@@ -20,7 +20,7 @@
         },
         {
             "id": 4,
-            "file_name": "images/2.png",
+            "file_name": "images/1.png",
             "width": 2560,
             "height": 1440
         },
@@ -32,13 +32,13 @@
         },
         {
             "id": 7,
-            "file_name": "images/2.png",
+            "file_name": "images/0.png",
             "width": 2560,
             "height": 1440
         },
         {
             "id": 8,
-            "file_name": "images/2.png",
+            "file_name": "images/1.png",
             "width": 2560,
             "height": 1440
         },
@@ -56,19 +56,19 @@
         },
         {
             "id": 11,
-            "file_name": "images/1.png",
+            "file_name": "images/2.png",
             "width": 2560,
             "height": 1440
         },
         {
             "id": 12,
-            "file_name": "images/7.png",
+            "file_name": "images/2.png",
             "width": 2560,
             "height": 1440
         },
         {
             "id": 13,
-            "file_name": "images/1.png",
+            "file_name": "images/0.png",
             "width": 2560,
             "height": 1440
         },
@@ -86,7 +86,7 @@
         },
         {
             "id": 16,
-            "file_name": "images/2.png",
+            "file_name": "images/3.png",
             "width": 2560,
             "height": 1440
         },
@@ -98,7 +98,7 @@
         },
         {
             "id": 18,
-            "file_name": "images/2.png",
+            "file_name": "images/1.png",
             "width": 2560,
             "height": 1440
         },
@@ -116,49 +116,49 @@
         },
         {
             "id": 21,
-            "file_name": "images/3.png",
-            "width": 2560,
-            "height": 1440
-        },
-        {
-            "id": 22,
             "file_name": "images/4.png",
             "width": 2560,
             "height": 1440
         },
         {
-            "id": 23,
-            "file_name": "images/1.png",
-            "width": 2560,
-            "height": 1440
-        },
-        {
-            "id": 24,
+            "id": 22,
             "file_name": "images/5.png",
             "width": 2560,
             "height": 1440
         },
         {
-            "id": 25,
+            "id": 23,
+            "file_name": "images/2.png",
+            "width": 2560,
+            "height": 1440
+        },
+        {
+            "id": 24,
             "file_name": "images/6.png",
             "width": 2560,
             "height": 1440
         },
         {
-            "id": 26,
-            "file_name": "images/0.png",
+            "id": 25,
+            "file_name": "images/7.png",
             "width": 2560,
             "height": 1440
         },
         {
-            "id": 27,
+            "id": 26,
             "file_name": "images/1.png",
             "width": 2560,
             "height": 1440
         },
         {
+            "id": 27,
+            "file_name": "images/2.png",
+            "width": 2560,
+            "height": 1440
+        },
+        {
             "id": 28,
-            "file_name": "images/0.png",
+            "file_name": "images/1.png",
             "width": 2560,
             "height": 1440
         },
@@ -1153,12 +1153,12 @@
             "image_id": 36,
             "category_id": 73,
             "bbox": [
-                319,
-                543,
-                29,
-                36
+                324,
+                544,
+                20,
+                34
             ],
-            "area": 1044,
+            "area": 680,
             "iscrowd": 0
         }
     ],

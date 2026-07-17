@@ -9,6 +9,7 @@ class Labels(str, Enum):
     bond_panel = 'bond_panel'
     bonfire_teleport = 'bonfire_teleport'
     boss_lv_text = 'boss_lv_text'
+    boss_treasure = 'boss_treasure'
     box_all_esc_options = 'box_all_esc_options'
     box_char_1 = 'box_char_1'
     box_char_2 = 'box_char_2'
@@ -74,4 +75,3 @@ class Labels(str, Enum):
     treasure = 'treasure'
     ult_ready = 'ult_ready'
     unlimit_gift = 'unlimit_gift'
-    boss_treasure = 'boss_treasure'
