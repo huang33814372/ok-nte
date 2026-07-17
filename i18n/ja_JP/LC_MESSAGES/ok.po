@@ -1151,3 +1151,39 @@ msgstr "記録機能を使用"
 
 msgid "启用后录制并回放选择目标关卡的操作"
 msgstr "有効にすると、目標ステージを選択する操作を記録して再生します"
+
+msgid "异象追猎"
+msgstr "異象ハント"
+
+msgid "追猎目标"
+msgstr "ハント対象"
+
+msgid "自动进行异象追猎任务"
+msgstr "異象ハント任務を自動で実行します"
+
+msgid "领取奖励次数"
+msgstr "報酬受取回数"
+
+msgid "设置为0则领取当前体力可领取的全部奖励"
+msgstr "0に設定すると、現在のスタミナで受け取れるすべての報酬を受け取ります"
+
+msgid "音霸魔王"
+msgstr "Beat King"
+
+msgid "无首铁驭"
+msgstr "Headless Rider"
+
+msgid "塞润尼缇"
+msgstr "Serenetti"
+
+msgid "黑之书"
+msgstr "Black Tome"
+
+msgid "海囚"
+msgstr "Sea Prisoner"
+
+msgid "围巢鸟"
+msgstr "Nestbound Bird"
+
+msgid "斑蝶"
+msgstr "Swallowtail"

@@ -71,6 +71,7 @@ class FakeChar:
         self._combat_start_priority = combat_start_priority
         self._cycle_full = cycle_full
         self.is_dead = False
+        self.has_intro = False
         self.waited = 0
         self.plan_calls = 0
 

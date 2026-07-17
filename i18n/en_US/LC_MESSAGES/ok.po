@@ -1151,3 +1151,39 @@ msgstr "Use recording feature"
 
 msgid "启用后录制并回放选择目标关卡的操作"
 msgstr "When enabled, records and replays the actions used to select the target level"
+
+msgid "异象追猎"
+msgstr "Anomaly Hunts"
+
+msgid "追猎目标"
+msgstr "Hunt Target"
+
+msgid "自动进行异象追猎任务"
+msgstr "Automatically run Anomaly Hunt tasks"
+
+msgid "领取奖励次数"
+msgstr "Claim Reward Count"
+
+msgid "设置为0则领取当前体力可领取的全部奖励"
+msgstr "Set to 0 to claim all rewards available within current stamina"
+
+msgid "音霸魔王"
+msgstr "Beat King"
+
+msgid "无首铁驭"
+msgstr "Headless Rider"
+
+msgid "塞润尼缇"
+msgstr "Serenetti"
+
+msgid "黑之书"
+msgstr "Black Tome"
+
+msgid "海囚"
+msgstr "Sea Prisoner"
+
+msgid "围巢鸟"
+msgstr "Nestbound Bird"
+
+msgid "斑蝶"
+msgstr "Swallowtail"

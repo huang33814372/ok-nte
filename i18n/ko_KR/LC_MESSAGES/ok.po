@@ -1151,3 +1151,39 @@ msgstr "기록 기능 사용"
 
 msgid "启用后录制并回放选择目标关卡的操作"
 msgstr "활성화하면 목표 스테이지 선택 동작을 기록하고 재생합니다"
+
+msgid "异象追猎"
+msgstr "이소 추적"
+
+msgid "追猎目标"
+msgstr "추적 대상"
+
+msgid "自动进行异象追猎任务"
+msgstr "이소 추적 작업을 자동으로 진행합니다"
+
+msgid "领取奖励次数"
+msgstr "보상 수령 횟수"
+
+msgid "设置为0则领取当前体力可领取的全部奖励"
+msgstr "0으로 설정하면 현재 활력으로 받을 수 있는 모든 보상을 수령합니다"
+
+msgid "音霸魔王"
+msgstr "Beat King"
+
+msgid "无首铁驭"
+msgstr "Headless Rider"
+
+msgid "塞润尼缇"
+msgstr "Serenetti"
+
+msgid "黑之书"
+msgstr "Black Tome"
+
+msgid "海囚"
+msgstr "Sea Prisoner"
+
+msgid "围巢鸟"
+msgstr "Nestbound Bird"
+
+msgid "斑蝶"
+msgstr "Swallowtail"

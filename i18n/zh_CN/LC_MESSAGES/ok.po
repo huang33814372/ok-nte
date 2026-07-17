@@ -1140,3 +1140,39 @@ msgstr ""
 
 msgid "启用后录制并回放选择目标关卡的操作"
 msgstr ""
+
+msgid "异象追猎"
+msgstr ""
+
+msgid "追猎目标"
+msgstr ""
+
+msgid "自动进行异象追猎任务"
+msgstr ""
+
+msgid "领取奖励次数"
+msgstr ""
+
+msgid "设置为0则领取当前体力可领取的全部奖励"
+msgstr ""
+
+msgid "音霸魔王"
+msgstr ""
+
+msgid "无首铁驭"
+msgstr ""
+
+msgid "塞润尼缇"
+msgstr ""
+
+msgid "黑之书"
+msgstr ""
+
+msgid "海囚"
+msgstr ""
+
+msgid "围巢鸟"
+msgstr ""
+
+msgid "斑蝶"
+msgstr ""

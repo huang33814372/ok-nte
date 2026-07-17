@@ -891,3 +891,39 @@ msgstr "Usar recurso de gravação"
 
 msgid "启用后录制并回放选择目标关卡的操作"
 msgstr "Quando ativado, grava e reproduz as ações usadas para selecionar a fase alvo"
+
+msgid "异象追猎"
+msgstr "Caça às Anomalias"
+
+msgid "追猎目标"
+msgstr "Alvo da Caça"
+
+msgid "自动进行异象追猎任务"
+msgstr "Executa automaticamente as tarefas de Caça às Anomalias"
+
+msgid "领取奖励次数"
+msgstr "Vezes para resgatar recompensa"
+
+msgid "设置为0则领取当前体力可领取的全部奖励"
+msgstr "Defina como 0 para resgatar todas as recompensas disponíveis com a energia atual"
+
+msgid "音霸魔王"
+msgstr "Beat King"
+
+msgid "无首铁驭"
+msgstr "Headless Rider"
+
+msgid "塞润尼缇"
+msgstr "Serenetti"
+
+msgid "黑之书"
+msgstr "Black Tome"
+
+msgid "海囚"
+msgstr "Sea Prisoner"
+
+msgid "围巢鸟"
+msgstr "Nestbound Bird"
+
+msgid "斑蝶"
+msgstr "Swallowtail"
