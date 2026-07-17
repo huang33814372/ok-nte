@@ -1,3 +1,7 @@
+import time
+
+import cv2
+import numpy as np
 from ok import TaskDisabledException
 from qfluentwidgets import FluentIcon
 
@@ -19,6 +23,12 @@ class AnomalyHunter(NTEOneTimeTask, BaseCombatTask):
     TARGET_SEA_PRISONER = "海囚"
     TARGET_NEST_BIRD = "围巢鸟"
     TARGET_SPOTTED_BUTTERFLY = "斑蝶"
+
+    WALK_METHOD = {
+        TARGET_HEADLESS_RIDER: [["w", 0.5], ["w", "d"]],
+        TARGET_SPOTTED_BUTTERFLY: [["s"]],
+    }
+
     HUNTER_TARGETS = [
         TARGET_SOUND_KING,
         TARGET_HEADLESS_RIDER,
@@ -45,7 +55,6 @@ class AnomalyHunter(NTEOneTimeTask, BaseCombatTask):
     HUNTER_NEXT_PAGE_TRAVEL_Y_START = 0.468
     HUNTER_TRAVEL_Y_STEP = 0.148
     HUNTER_FIRST_PAGE_SIZE = 4
-    DIRECT_WALK_TARGETS = {TARGET_SOUND_KING, TARGET_SERENITY}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -70,11 +79,6 @@ class AnomalyHunter(NTEOneTimeTask, BaseCombatTask):
                     "type": "drop_down",
                     "options": cls.HUNTER_TARGETS,
                 }
-            }
-        )
-        instance.config_description.update(
-            {
-                cls.CONF_HUNTER_TARGET: "选择要挑战的异象追猎目标",
             }
         )
         if not daily:
@@ -131,16 +135,17 @@ class AnomalyHunter(NTEOneTimeTask, BaseCombatTask):
             self.log_info(f"准备挑战异象追猎目标: {target}")
 
             self.start_hunter_attempt(target, target_idx, reopen_page=attempt_count > 1)
+            self.wait_in_team(settle_time=0.25)
 
-            self.wait_in_team()
-            self.sleep(1)
             if self.do_combat_and_claim():
                 success_count += 1
                 consecutive_failures = 0
             else:
                 failed_count += 1
                 consecutive_failures += 1
-                self.log_warning(f"异象追猎连续失败 {consecutive_failures}/{self.MAX_CONSECUTIVE_FAILURES}")
+                self.log_warning(
+                    f"异象追猎连续失败 {consecutive_failures}/{self.MAX_CONSECUTIVE_FAILURES}"
+                )
                 if consecutive_failures >= self.MAX_CONSECUTIVE_FAILURES:
                     self.log_warning("连续失败已达上限，将传送最近的电话亭传送点", notify=True)
                     break
@@ -152,11 +157,13 @@ class AnomalyHunter(NTEOneTimeTask, BaseCombatTask):
         self.sleep(1)
         self.click_nearest_map_teleport()
         self.sleep(2)
-        self.log_warning(f"异象追猎执行结果: 成功次数={success_count}, 失败次数={failed_count}，共计消耗体力={success_count*self.TASK_COST}")
+        self.log_warning(
+            f"异象追猎执行结果: 成功次数: {success_count},"
+            f"失败次数: {failed_count}，共计消耗体力: {success_count * self.TASK_COST}"
+        )
         return True
 
     def start_hunter_attempt(self, target: str, target_idx: int, reopen_page=False):
-        target = self.normalize_target(target)
         if reopen_page:
             self.open_hunter_page()
         self.travel_to_hunter_target(target_idx)
@@ -203,125 +210,111 @@ class AnomalyHunter(NTEOneTimeTask, BaseCombatTask):
         self.sleep(0.5)
 
     def enter_hunter(self, target: str):
-        if target in self.DIRECT_WALK_TARGETS:
-            self.walk_forward_to_hunter()
-            return
+        self.walk_until_interac_or_combat(script=self.WALK_METHOD.get(target, ["w"]))
+        if self.is_in_team() and self.find_interac():
+            self.wait_until(
+                lambda: not self.is_in_team(),
+                pre_action=lambda: self.send_interac(handle_claim=False),
+                time_out=5,
+                raise_if_not_found=False,
+            )
 
-        if target == self.TARGET_HEADLESS_RIDER:
-            direction = ("w", "d")
-        elif target == self.TARGET_SPOTTED_BUTTERFLY:
-            direction = ("s",)
-        else:
-            direction = ("w",)
-        self.enter_hunter_from_interac(direction_keys=direction)
+    def walk_until_interac_or_combat(
+        self, script=[["w"]], time_out=10, run=False, raise_if_not_found=False
+    ):
+        def cond():
+            return self.find_interac() or self.in_combat()
 
-    def walk_forward_to_hunter(self):
-        self.log_info("当前目标无需交互，向前寻路进入副本")
-        entered = self.walk_until_hunter_entered(
-            direction_keys=("w",), time_out=3, raise_if_not_found=False
-        )
-        if not entered:
-            self.log_warning("向前寻路未确认进入状态，继续交给战斗流程处理")
-
-    def enter_hunter_from_interac(self, direction_keys=("w",)):
-        self.log_info("寻路至异象追猎交互点并进入副本")
-        self.walk_until_interac_by_keys(direction_keys=direction_keys, raise_if_not_found=True)
-        self.wait_until(
-            lambda: not self.find_interac(),
-            post_action=lambda: self.send_interac(handle_claim=False),
-            time_out=5,
-            settle_time=0.5,
-        )
-
-    def walk_until_interac_by_keys(self, direction_keys=("w",), time_out=10, raise_if_not_found=False):
+        if cond():
+            return True
+        direction = script[-1]
         ret = False
         try:
             self.middle_click(after_sleep=0.2)
-            for key in direction_keys:
+            for step in script[:-1]:
+                key = step[0]
+                down_time = step[1]
+                if isinstance(key, str) and isinstance(down_time, float):
+                    self.send_key(key, down_time=down_time)
+                    self.sleep(0.1)
+            for key in direction:
                 self.send_key_down(key)
+            if run:
+                self.sleep(0.1)
+                self.send_key("lshift")
             ret = bool(
                 self.wait_until(
-                    self.find_interac,
+                    cond,
                     time_out=time_out,
                     raise_if_not_found=raise_if_not_found,
                 )
             )
         finally:
-            for key in direction_keys:
+            for key in direction:
                 self.send_key_up(key)
         return ret
 
-    def walk_until_hunter_entered(self, direction_keys=("w",), time_out=10, raise_if_not_found=False):
-        ret = False
-        try:
-            self.middle_click(after_sleep=0.2)
-            for key in direction_keys:
-                self.send_key_down(key)
-            ret = bool(
-                self.wait_until(
-                    lambda: self.find_one(Labels.in_domain) or not self.is_in_team(),
-                    time_out=time_out,
-                    raise_if_not_found=raise_if_not_found,
-                )
-            )
-        finally:
-            for key in direction_keys:
-                self.send_key_up(key)
-        return ret
+    def find_boss_treasure(self):
+        for feature_name in self.DEFAULT_TREASURE_FEATURES:
+            mat = self.get_feature_by_name(feature_name).mat
+            mat = cv2.cvtColor(mat, cv2.COLOR_BGR2GRAY)
+            mat_h, mat_w = mat.shape[:2]
+            start_scale = 1.0
+            template = mat
+            for scale in np.arange(start_scale, 0.8, -0.1):
+                if scale < start_scale:
+                    template = cv2.resize(
+                        mat,
+                        (int(mat_w * scale), int(mat_h * scale)),
+                        interpolation=cv2.INTER_NEAREST,
+                    )
+                if result := self.find_one(
+                    feature_name=feature_name,
+                    template=template,
+                    box=self.main_viewport,
+                    threshold=self.BOSS_TREASURE_THRESHOLD,
+                    frame_processor=lambda frame: cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY),
+                ):
+                    return result
 
-    def prepare_bosstreasure_search(self, middle_click_sleep=2):
-        self.send_key("a", after_sleep=0.2)
-        self.middle_click(after_sleep=middle_click_sleep)
+    def rotate_and_find_treasure(self, check_boss=False):
+        if result := self.find_boss_treasure():
+            return result
+        if check_boss:
+            if self.wait_until(self.is_boss, time_out=1):
+                return
 
-    def find_bosstreasure_in_view(self):
-        for feature_name in self.get_bosstreasure_features():
-            result = self.find_one(
-                feature_name=feature_name,
-                box=self.main_viewport,
-                threshold=self.BOSS_TREASURE_THRESHOLD,
-                use_gray_scale=True,
-            )
-            if result:
+        def sleep(sec):
+            deadline = time.time() + sec
+            while time.time() < deadline:
+                if check_boss and self.is_boss():
+                    return True
+                self.sleep(0.1)
+
+        for i in range(4):
+            self.log_info(f"Boss宝箱查找次数：{i + 1}/4")
+            self.send_key("a")
+            if sleep(0.3):
+                return
+            self.middle_click()
+            if sleep(1):
+                return
+            if result := self.find_boss_treasure():
                 return result
 
-    def find_bosstreasure_once(self):
-        self.prepare_bosstreasure_search()
-        return self.wait_until(
-            self.find_bosstreasure_in_view,
-            time_out=self.BOSS_TREASURE_ONCE_SEARCH_TIME,
-            settle_time=0.2,
-            raise_if_not_found=False,
-        )
-
-    def find_bosstreasure(self):
-        for attempt in range(1, 5):
-            self.log_warning(f"Boss宝箱查找次数：{attempt}/4")
-            self.prepare_bosstreasure_search()
-            result = self.find_bosstreasure_in_view()
-            if result:
-                return result
-
-    def has_bosstreasure(self, check_once=False):
-        finder = self.find_bosstreasure_once if check_once else self.find_bosstreasure
-        return bool(finder())
-
-    def walk_to_bosstreasure(self, check_once=False):
-        if self.has_bosstreasure(check_once=check_once):
+    def walk_to_boss_treasure(self):
+        if self.rotate_and_find_treasure():
             self.log_warning("前往BOSS宝箱中")
-            reached_interac = self.walk_to_box(
-                self.find_bosstreasure_in_view,
+            if self.walk_to_box(
+                self.find_boss_treasure,
                 time_out=self.BOSS_TREASURE_WALK_TIMEOUT,
                 end_condition=self.find_interac,
                 y_offset=0.1,
                 x_threshold=0.15,
-            )
-            if reached_interac:
+            ):
                 return True
-            self.log_warning("前往BOSS宝箱超时，判定为失败")
+            self.log_warning("前往BOSS宝箱超时, 判定为失败")
         return False
-
-    def get_bosstreasure_features(self):
-        return list(self.DEFAULT_TREASURE_FEATURES)
 
     def is_claim_btn_ready(self):
         return self.find_confirm(
@@ -335,45 +328,29 @@ class AnomalyHunter(NTEOneTimeTask, BaseCombatTask):
         self.operate_click(0.609, 0.659, after_sleep=2)
 
     def do_combat_and_claim(self):
-        pending_reward_ready = False
         self.log_info("战斗前检查是否有上次未领取的BOSS宝箱")
-        pending_reward_ready = self.has_bosstreasure(check_once=True)
-        self.send_key("d", after_sleep=0.2)
-        self.middle_click(after_sleep=0.6)
-        if pending_reward_ready:
-            self.log_info("发现BOSS宝箱，跳过战斗")
+        if self.rotate_and_find_treasure(check_boss=True):
+            self.log_info("发现BOSS宝箱, 跳过战斗")
         else:
-            self.log_info("未发现BOSS宝箱，调用战斗模块")
+            self.log_info("未发现BOSS宝箱, 调用战斗模块")
             self.walk_until_combat(run=True, delay=1)
-            self.combat_once()
+            self.combat_once(retarget_turn=False)
 
         self.log_info("调用领取BOSS宝箱模块")
-        claimed_reward = False
 
-        def action(count):
-            nonlocal pending_reward_ready, claimed_reward
-            reward_found = bool(self.find_interac())
-            if not reward_found:
-                reward_found = self.walk_to_bosstreasure(check_once=pending_reward_ready)
-            pending_reward_ready = False
+        def action():
+            if not self.find_interac():
+                self.walk_to_boss_treasure()
 
-            claimed_reward = bool(reward_found)
-            if reward_found:
+            if self.find_interac():
                 self.log_info("发现宝箱，正在领取交互中")
                 self.send_interac(handle_claim=False)
                 if self.wait_until(self.is_claim_btn_ready, raise_if_not_found=False, time_out=5):
                     self.log_info("发现奖励领取页面，领取奖励")
-                    # self.log_warning("测试提示：领取成功")
-                    self.operate_click(0.609, 0.659, after_sleep=2)
-                else:
-                    claimed_reward = False
-                    self.log_warning("未能进入领取奖励界面，退出当前环境交互中")
-                    self.exit_reward_interaction()
-            else:
-                self.log_warning("领取奖励失败，退出当前环境交互中")
-                self.exit_reward_interaction()
-            return True
+                    if self.wait_until(
+                        self.is_in_team,
+                        pre_action=lambda: self.operate_click(0.609, 0.659, after_sleep=2),
+                    ):
+                        return True
 
-        if not self.retry_on_action(action):
-            return False
-        return claimed_reward
+        return self.retry_on_action(action, reset_action=self.ensure_main)
