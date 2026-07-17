@@ -927,6 +927,8 @@ class CombatPlanner:
 
     def _execute_field_time(self, char: "BaseChar", max_field_time: float) -> ActionResult:
         duration = max_field_time - char.time_elapsed_accounting_for_freeze(char.last_perform)
+        if char.has_intro:
+            duration += char.INTRO_MOTION_FREEZE_DURATION
         if duration > 0:
             char.continues_normal_attack(duration)
         return ActionResult(
