@@ -62,7 +62,8 @@
 
 ### 📋 Specific AFK & Instances (Tasks)
 - **999 Nights**: AFK farming for EXP.
-- **Anomaly**: Automate Anomaly challenges.
+- **Anomaly Domain**: Automate Anomaly Domain.
+- **Anomaly Hunts**：Automate Anomaly Hunts。
 - **Auto Whirlwind**: Automatically completes 'Whirlwind' challenges.
 - **Bagel Agent**: Automatically posts, replies, and likes in the Bagel community, or assists in generating copy in assistant mode.
 
@@ -188,7 +189,7 @@ ok-nte.exe -t 2 -e
 ## 🔗 Projects developed using [ok-script](https://github.com/ok-oldking/ok-script):
 
 * Wuthering Waves [https://github.com/ok-oldking/ok-wuthering-waves](https://github.com/ok-oldking/ok-wuthering-waves)
-* End Field [https://github.com/ok-oldking/ok-end-field](https://github.com/ok-oldking/ok-end-field)
+* End Field [https://github.com/AliceJump/ok-end-field](https://github.com/ok-oldking/ok-end-field)
 * Genshin Impact (discontinued, but background story progression is still usable) [https://github.com/ok-oldking/ok-genshin-impact](https://github.com/ok-oldking/ok-genshin-impact)
 * Girls' Frontline 2 [https://github.com/ok-oldking/ok-gf2](https://github.com/ok-oldking/ok-gf2)
 * Honkai: Star Rail [https://github.com/Shasnow/ok-starrailassistant](https://github.com/Shasnow/ok-starrailassistant)

@@ -76,6 +76,7 @@ or consequences are not associated with this software.
 ### 📋 特定挂机与副本 (任务)
 - **九百九十九夜**：挂机刷经验。
 - **异象界域**：自动化挑战异象界域。
+- **异象追猎**：自动化挑战异象追猎。
 - **自动小旋风**：自动完成「小旋风」战斗。
 - **呗果智能体**：在呗果社区中自动发帖、回帖、点赞，或开启助手模式辅助生成文案。
 
@@ -207,7 +208,7 @@ ok-nte.exe -t 2 -e
 ## 🔗 使用[ok-script](https://github.com/ok-oldking/ok-script)开发的项目：
 
 * 鸣潮 [https://github.com/ok-oldking/ok-wuthering-wave](https://github.com/ok-oldking/ok-wuthering-waves)
-* 明日方舟:终末地 [https://github.com/ok-oldking/ok-ef](https://github.com/ok-oldking/ok-end-field)
+* 明日方舟:终末地 [https://github.com/AliceJump/ok-end-field](https://github.com/ok-oldking/ok-end-field)
 * 原神(停止维护,
   但是后台过剧情可用) [https://github.com/ok-oldking/ok-genshin-impact](https://github.com/ok-oldking/ok-genshin-impact)
 * 少前2 [https://github.com/ok-oldking/ok-gf2](https://github.com/ok-oldking/ok-gf2)
