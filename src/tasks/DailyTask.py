@@ -446,7 +446,6 @@ class DailyTask(NTEOneTimeTask, CinemaDateMixin, BaseNTETask):
 
         def action():
             self.openF5panel()
-            self.sleep(1)
             self.operate_click(0.415, 0.753)
             self.sleep(0.5)
             return self.wait_panel(Labels.f5_coffee_panel)
@@ -500,7 +499,6 @@ class DailyTask(NTEOneTimeTask, CinemaDateMixin, BaseNTETask):
         def open_house_panel():
             def action():
                 self.openF5panel()
-                self.sleep(1)
                 self.operate_click(0.255, 0.468)
                 self.sleep(0.5)
                 return self.wait_panel(Labels.f5_house_panel)
@@ -534,6 +532,7 @@ class DailyTask(NTEOneTimeTask, CinemaDateMixin, BaseNTETask):
             Labels.anomaly_hamster_ball,
             Labels.anomaly_wooden_crate,
         ]:
+            is_initial = True
             open_house_panel()
 
             # 寻找目标家具
@@ -548,16 +547,24 @@ class DailyTask(NTEOneTimeTask, CinemaDateMixin, BaseNTETask):
                 if check_house_lock(target_y):
                     self.sleep(0.25)
                 else:
-                    self.operate_click(ratio_x, target_y)
-                    self.sleep(0.25)
+                    if not is_initial:
+                        box = self.get_box_by_name(Labels.box_house_preview_snapshot)
+                        snapshot = box.crop_frame(self.frame)
+                        while scroll_times > 0:
+                            self.operate_click(ratio_x, target_y)
+                            self.sleep(0.25)
+                            if not self.find_one(template=snapshot, box=box):
+                                break
+                            self.sleep(0.25)
+                    is_initial = False
                     if self.find_sift_feature(furniture, box=house_box):
                         break
 
                 # 滚动并检查是否成功滚动
                 if scroll:
                     scroll_times += 1
-                    snapshot_box = self.box_of_screen(0.016, 0.731, 0.143, 0.849, hcenter=True)
-                    snapshot = snapshot_box.crop_frame(self.frame)
+                    box = self.get_box_by_name(Labels.box_house_list_snapshot)
+                    snapshot = box.crop_frame(self.frame)
                     self.operate(
                         lambda: (
                             self.scroll_relative(ratio_x, ratio_y, -scroll_per_item),
@@ -566,7 +573,7 @@ class DailyTask(NTEOneTimeTask, CinemaDateMixin, BaseNTETask):
                         block=True,
                     )
                     y_offset = self.height * 0.1
-                    search_box = snapshot_box.copy(y_offset=-y_offset, height_offset=y_offset)
+                    search_box = box.copy(y_offset=-y_offset, height_offset=y_offset)
                     scroll = not self.find_one(
                         "snapshot", template=snapshot, box=search_box, threshold=0.9
                     )

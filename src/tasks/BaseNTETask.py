@@ -554,7 +554,7 @@ class BaseNTETask(CharUIMixin, MovementMixin, VisionMixin, OgMixin, LogGateMixin
         if not result:
             self.log_error("can't find panel, make sure f5 is the hotkey for panel", notify=True)
             raise CannotFindException("can't find panel, make sure f5 is the hotkey for panel")
-        self.sleep(0.5)
+        self.sleep(1.5)
         return result
 
     def openESCpanel(self):

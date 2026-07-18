@@ -71,7 +71,7 @@ class VisionMixin(BaseTask):
         small_target_retry=True,
         small_target_scene_scale=2.0,
         small_target_min_match_count=8,
-        small_target_ratio=0.85,
+        small_target_ratio=0.75,
         trim_template=-1.0,
     ) -> Box | None:
         """
