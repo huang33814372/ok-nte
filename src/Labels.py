@@ -16,6 +16,8 @@ class Labels(str, Enum):
     box_char_3 = 'box_char_3'
     box_char_4 = 'box_char_4'
     box_f1_activity_reward = 'box_f1_activity_reward'
+    box_house_list_snapshot = 'box_house_list_snapshot'
+    box_house_preview_snapshot = 'box_house_preview_snapshot'
     box_skill = 'box_skill'
     box_ultimate = 'box_ultimate'
     char_1_text = 'char_1_text'

@@ -1160,6 +1160,32 @@
             ],
             "area": 680,
             "iscrowd": 0
+        },
+        {
+            "id": 74,
+            "image_id": 32,
+            "category_id": 76,
+            "bbox": [
+                683,
+                417,
+                338,
+                191
+            ],
+            "area": 64558,
+            "iscrowd": 0
+        },
+        {
+            "id": 75,
+            "image_id": 32,
+            "category_id": 75,
+            "bbox": [
+                114,
+                1088,
+                179,
+                99
+            ],
+            "area": 17721,
+            "iscrowd": 0
         }
     ],
     "categories": [
@@ -1526,6 +1552,16 @@
         {
             "id": 73,
             "name": "boss_treasure",
+            "supercategory": ""
+        },
+        {
+            "id": 75,
+            "name": "box_house_list_snapshot",
+            "supercategory": ""
+        },
+        {
+            "id": 76,
+            "name": "box_house_preview_snapshot",
             "supercategory": ""
         }
     ]
