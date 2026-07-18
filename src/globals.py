@@ -207,6 +207,11 @@ class Globals(QObject):
         """清空缓存"""
         self.openvino_model_async.clear_cache()
 
+    @property
+    def openvino_available(self):
+        """openvino是否可用"""
+        return self.openvino_model_async._openvino_available
+
     def init_sound_context(self):
         from src.ui.util import wait_main_window
 

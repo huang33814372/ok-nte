@@ -146,6 +146,10 @@ class BaseNTETask(CharUIMixin, MovementMixin, VisionMixin, OgMixin, LogGateMixin
         if og.my_app is None:
             return None
         return getattr(og.my_app, "openvino_latest_image", None)
+    
+    @property
+    def openvino_available(self):
+        return getattr(og.my_app, "openvino_available", None)
 
     @property
     def main_viewport(self):
