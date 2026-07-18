@@ -223,7 +223,7 @@ class GiftTask(NTEOneTimeTask, BaseNTETask):
             if self.find_one(
                 f"gift_name_{profile_id}",
                 template=template,
-                box=current_name_box,
+                box=current_name_box.scale(1.1),
                 threshold=self.NAME_MATCH_THRESHOLD,
             ):
                 self._report(f"找到角色 {profile['display_name']}")
