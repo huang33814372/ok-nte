@@ -22,7 +22,7 @@ class TestCombatDetectionTestStats(unittest.TestCase):
 
         self.assertIn("运行时长: 5.5s", report)
         self.assertIn("LV: 1/2 (50.0%)", report)
-        self.assertIn("Target: 1/2 (50.0%)", report)
+        self.assertIn("锁定目标白色菱形标记: 1/2 (50.0%)", report)
         self.assertIn("Health bar: 1/2 (50.0%)", report)
         self.assertIn("AVX2 测试绕过: 是", report)
         self.assertIn("采样错误: 1", report)
@@ -35,7 +35,7 @@ class TestCombatDetectionTestStats(unittest.TestCase):
         report = stats.report("openvino(test)", using_avx2_bypass=False)
 
         self.assertIn("LV: 0/0 (n/a)", report)
-        self.assertIn("Target: 0/0 (n/a)", report)
+        self.assertIn("锁定目标白色菱形标记: 0/0 (n/a)", report)
         self.assertIn("Health bar: 0/0 (n/a)", report)
         self.assertIn("AVX2 测试绕过: 否", report)
 

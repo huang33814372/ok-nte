@@ -47,7 +47,7 @@ class CombatDetectionTestStats:
                 f"Samples: {self.rounds}",
                 f"LV: {self.lv_hits}/{self.rounds} ({self._rate(self.lv_hits, self.rounds)})",
                 (
-                    f"Target: {self.target_hits}/{self.rounds} "
+                    f"Locked target white diamond marker: {self.target_hits}/{self.rounds} "
                     f"({self._rate(self.target_hits, self.rounds)})"
                 ),
                 (
@@ -68,7 +68,7 @@ class CombatDetectionTestStats:
             f"采样轮次: {self.rounds}",
             f"LV: {self.lv_hits}/{self.rounds} ({self._rate(self.lv_hits, self.rounds)})",
             (
-                f"Target: {self.target_hits}/{self.rounds} "
+                f"锁定目标白色菱形标记: {self.target_hits}/{self.rounds} "
                 f"({self._rate(self.target_hits, self.rounds)})"
             ),
             (
@@ -85,7 +85,7 @@ class CombatDetectionTestStats:
 
 
 class CombatDetectionTestTask(NTEOneTimeTask, CombatCheck):
-    """持续采样 CombatCheck 的 LV、目标与红色血条检测，直到用户手动停止。"""
+    """持续采样 CombatCheck 的 LV, 锁定目标白色菱形标记与红色血条, 直到用户手动停止。"""
 
     SAMPLE_INTERVAL = 0.25
     MAX_REPORTED_ERRORS = 10
@@ -93,8 +93,10 @@ class CombatDetectionTestTask(NTEOneTimeTask, CombatCheck):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.name = "自动战斗检测诊断"
-        self.description = "持续检测诊断 LV、目标和红色血条；请手动停止以查看完整报告"
-        self.icon = FluentIcon.SEARCH
+        self.description = (
+            "持续检测诊断 Lv, 锁定目标标记(白色菱形)和红色血条; 请手动停止以查看完整报告"
+        )
+        self.icon = FluentIcon.INFO
         self._stats: CombatDetectionTestStats | None = None
         self._original_detector = None
         self._using_avx2_bypass = False
@@ -106,7 +108,7 @@ class CombatDetectionTestTask(NTEOneTimeTask, CombatCheck):
         self._stats = CombatDetectionTestStats()
         try:
             self._prepare_detector()
-            self.log_info("自动战斗检测诊断已开始；请手动停止任务以生成完整报告", notify=True)
+            self.log_info("自动战斗检测诊断已开始; 请手动停止任务以生成完整报告", notify=True)
             self._run_samples()
         except TaskDisabledException:
             self.log_info("自动战斗检测诊断已由用户停止")
@@ -120,7 +122,7 @@ class CombatDetectionTestTask(NTEOneTimeTask, CombatCheck):
     def _prepare_detector(self) -> None:
         app = og.my_app
         if app is None:
-            raise RuntimeError("应用尚未初始化，无法使用 OpenVINO 检测器")
+            raise RuntimeError("应用尚未初始化, 无法使用 OpenVINO 检测器")
 
         detector = app.openvino_model_async
         if detector._openvino_available:
@@ -128,8 +130,8 @@ class CombatDetectionTestTask(NTEOneTimeTask, CombatCheck):
 
         self._original_detector = detector
         message = (
-            "检测到 OpenVINO 因 AVX2 探测不可用；将仅在本次 CombatCheck 测试中创建"
-            "绕过 AVX2 前置检查的检测器。该测试不保证 CPU 实际兼容 OpenVINO。"
+            "检测到 OpenVINO 因 AVX2 探测不可用; 将仅在本次 CombatCheck 测试中创建"
+            "绕过 AVX2 前置检查的检测器. 该测试不保证 CPU 实际兼容 OpenVINO."
         )
         self.log_warning(message, notify=True)
         test_detector = _Avx2BypassYOLO26OpenVINOAsyncDetector(
@@ -168,11 +170,14 @@ class CombatDetectionTestTask(NTEOneTimeTask, CombatCheck):
         if stats is None:
             return
         self.info_set("自动战斗检测诊断", f"第 {stats.rounds} 轮")
-        self.info_set("当前检测", f"LV={lv}, Target={target}, Health bar={health_bar}")
+        self.info_set(
+            "当前检测",
+            f"LV={lv}, 锁定目标白色菱形标记={target}, 红色血条={health_bar}",
+        )
         self.info_set(
             "命中统计",
-            f"LV {stats.lv_hits}/{stats.rounds}; Target {stats.target_hits}/{stats.rounds}; "
-            f"Health bar {stats.health_bar_hits}/{stats.rounds}",
+            f"LV {stats.lv_hits}/{stats.rounds}; 锁定目标白色菱形标记 "
+            f"{stats.target_hits}/{stats.rounds}; 红色血条 {stats.health_bar_hits}/{stats.rounds}",
         )
 
     def _record_error(self, error: Exception) -> None:
